@@ -1,0 +1,13 @@
+// 파일 수정만 자동 승인 (권장):
+{
+    "permissions": {
+        "defaultMode": "acceptEdits"
+    }
+}
+
+// 모든 작업 자동 승인 (주의 필요):
+// {
+//     "permissions": {
+//         "defaultMode": "bypassPermissions"
+//     }
+// }
