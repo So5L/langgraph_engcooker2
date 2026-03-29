@@ -1,0 +1,109 @@
+{
+	"meta": {
+		"generatedAt": "2026-03-28T13:17:55.978Z",
+		"tasksAnalyzed": 12,
+		"totalTasks": 12,
+		"analysisCount": 12,
+		"thresholdScore": 5,
+		"projectName": "Task Master",
+		"usedResearch": false
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Project setup and dependencies installation",
+			"complexityScore": 2,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down project initialization into: (1) Create directory structure with all required folders, (2) Create pyproject.toml with dependencies and dev dependencies, (3) Update .gitignore for Python patterns, (4) Create .env from .env.example and verify dependency installation works",
+			"reasoning": "Low complexity - standard Python project setup. Directory creation and dependency specification are straightforward. Risk is minimal since no existing code needs migration. Only challenge is ensuring correct dependency versions (LangGraph ≥0.2, Pydantic v2). ~15-20 minutes of work."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Define configuration and constants (settings.py)",
+			"complexityScore": 3,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Split configuration creation into: (1) Implement Settings class with all constants (character limits, reading speed, retry count), (2) Add environment variable loading with dotenv, (3) Create unit tests to verify all constants are accessible and validate against PRD requirements",
+			"reasoning": "Low-medium complexity - simple data class with constants. No complex logic, just organizing configuration values. Requires careful alignment with PRD specifications (200-260 chars, 270 chars/min, max 2 retries). Main effort is ensuring all constants are documented. ~20-30 minutes."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Define data schemas (ScriptState, ScriptInput, ScriptOutput)",
+			"complexityScore": 4,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Divide schema definition into: (1) Create ScriptInput Pydantic model with field validation and min_length constraints, (2) Define ScriptState TypedDict with all intermediate and output fields, (3) Create ScriptOutput Pydantic model with quality metrics, (4) Write comprehensive validation tests for all three schemas",
+			"reasoning": "Medium complexity - requires understanding Pydantic v2 and TypedDict nuances. ScriptState needs total=False for optional fields. Must implement proper field constraints (min_length, ge/le for scores). Critical foundation for type safety. ~45-60 minutes including thorough testing."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Create system prompt template for script generation",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break prompt engineering into: (1) Write base SYSTEM_PROMPT_TEMPLATE with 4+1 section structure and style guidelines in Korean, (2) Create few-shot examples with valid JSON responses for 2-3 different words, (3) Implement build_generation_prompt() function with retry feedback incorporation, (4) Validate character counts in examples match 200-260 range, (5) Test prompt with manual Claude API call to verify output quality",
+			"reasoning": "Medium-high complexity - prompt engineering is iterative and requires Korean language expertise. Must balance specificity (character counts per section) with flexibility. Few-shot examples are critical for JSON formatting. Estimating ~1.5-2 hours for effective prompt design and validation."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Implement script_generator node (LLM invocation and JSON parsing)",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Split LLM integration into: (1) Implement basic script_generator() function with Claude API client setup, (2) Add API call with proper message formatting and error handling, (3) Create parse_llm_response() with Strategy 1 (direct JSON parse), (4) Add Strategy 2 and 3 fallback parsing with regex, (5) Implement exponential backoff for API failures, (6) Write comprehensive unit tests with mocked API responses",
+			"reasoning": "High complexity - multiple failure modes to handle (API errors, rate limits, JSON parsing failures). Three-tier fallback strategy for robust parsing. Requires understanding Anthropic SDK, regex patterns, and error recovery. Testing requires careful mocking. ~2-3 hours of development."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Implement formatter node (section merging and metadata calculation)",
+			"complexityScore": 4,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Divide formatting into: (1) Implement section merging logic with fixed order and empty section handling, (2) Add estimated_duration_sec calculation based on Korean reading speed (270 chars/min), (3) Create unit tests verifying correct ordering, duration calculation accuracy, and edge cases (missing sections)",
+			"reasoning": "Medium complexity - straightforward logic but requires precision. Duration calculation must be accurate (critical for PRD success metrics). Section ordering is fixed and simple. Main challenge is handling missing/empty sections gracefully. ~45-60 minutes."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Assemble LangGraph workflow (Phase 1 MVP: generator → formatter)",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Split workflow creation into: (1) Implement create_graph() function with StateGraph initialization, (2) Add script_generator and formatter nodes with proper edges, (3) Create main.py CLI with input/output handling and error reporting, (4) Write integration tests invoking full graph and measuring execution time",
+			"reasoning": "Medium complexity - LangGraph API learning curve for first-time users. Phase 1 is linear (no conditional edges), but requires understanding StateGraph, node registration, and edge definitions. Integration with main.py CLI adds complexity. ~1.5-2 hours including testing."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Implement input_validator node with Pydantic validation",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Divide validation into: (1) Implement input_validator() with Pydantic model validation, (2) Add custom validation rules (etymology_explanation min length check), (3) Create ScriptState initialization with all default fields, (4) Write unit tests for valid/invalid inputs and error message clarity",
+			"reasoning": "Medium complexity - Pydantic validation is straightforward, but error handling requires careful design. Must initialize all ScriptState fields with defaults. Error messages must be actionable for users. Depends on Task 3 schemas being complete. ~1-1.5 hours."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Implement quality_reviewer node with checklist validation",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Split quality review into: (1) Implement run_quality_checks() with section completeness verification, (2) Add character count range validation (200-260), (3) Implement etymology keyword detection logic, (4) Add memory_anchor concreteness check, (5) Create retry logic with max retry enforcement in quality_reviewer(), (6) Write comprehensive unit tests for all check scenarios and retry behavior",
+			"reasoning": "High complexity - multiple validation rules with different logic (regex for keywords, length checks, keyword lists). Retry logic must prevent infinite loops while providing actionable feedback. Korean text processing adds linguistic complexity. ~2-2.5 hours."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Integrate all nodes with conditional edges (Phase 2 complete workflow)",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break workflow integration into: (1) Implement should_retry() conditional edge function with retry logic, (2) Update create_graph() to add all 4 nodes (input_validator, script_generator, quality_reviewer, formatter), (3) Add conditional_edges from quality_reviewer with retry loop, (4) Update main.py with try-catch for validation errors and ScriptOutput formatting, (5) Write integration tests verifying retry loop behavior and max retry enforcement",
+			"reasoning": "High complexity - conditional edges in LangGraph require careful state management. Retry loop must not create infinite cycles. Testing requires simulating quality failures and verifying correct branching. Must ensure state propagates correctly through cycles. ~2.5-3 hours including thorough testing."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Create test fixtures and comprehensive test suite (Phase 3)",
+			"complexityScore": 6,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Divide test suite creation into: (1) Create sample_words.json with 10+ diverse word samples covering different etymology types, (2) Implement unit tests for input_validator node, (3) Add unit tests for script_generator with mocked API responses, (4) Create unit tests for quality_reviewer and formatter nodes, (5) Implement E2E integration test running all 10 words through full workflow, (6) Add quality metrics validation (≥90% pass rate, ≤30s generation time), (7) Configure pytest.ini and measure code coverage",
+			"reasoning": "Medium-high complexity - requires creating realistic test data in Korean. E2E tests need careful timing and quality assertions. Code coverage setup and pytest configuration add overhead. Must validate against PRD success metrics (90% pass rate). ~2-3 hours."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Prompt tuning and quality calibration based on test results (Phase 3)",
+			"complexityScore": 9,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Split optimization into: (1) Run full test suite and collect failure samples, (2) Categorize failure modes (section missing, length violations, weak memory anchors, tone issues), (3) Analyze character distribution across sections from successful outputs, (4) Update SYSTEM_PROMPT_TEMPLATE with explicit section checklists and refined examples, (5) Calibrate quality thresholds (adjust MIN/MAX_CHAR_COUNT if needed, refine keyword lists), (6) Add per-section character guidance to prompt, (7) Create docs/usage.md with input guidelines and output interpretation, (8) Re-run test suite and validate ≥90% pass rate achieved",
+			"reasoning": "Very high complexity - iterative optimization requiring data analysis, Korean language expertise, and prompt engineering skill. Must balance competing constraints (brevity vs completeness). Requires multiple test-analyze-refine cycles. Documentation adds significant effort. ~3-4 hours, potentially more iterations."
+		}
+	]
+}

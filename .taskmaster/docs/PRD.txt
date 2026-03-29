@@ -1,0 +1,515 @@
+<context>
+# Overview
+
+## Problem Statement
+
+영어 어원 기반 교육 콘텐츠를 유튜브 쇼츠로 제작하는 크리에이터는 단어마다 스크립트를 수동으로 작성해야 한다. 기존 영단어 콘텐츠는 단어+뜻의 단순 반복 포맷이 많아 시청자의 기억 보존율이 낮고, 어원 설명을 쇼츠 포맷에 맞는 스토리텔링 스크립트로 변환하는 자동화 도구가 존재하지 않는다.
+
+**해결책**: 영어 단어 + 한국어 뜻 + 어원 풀이 설명을 invoke하면, LangGraph 기반 AI 파이프라인이 60초 분량의 기억 친화적 한국어 쇼츠 스크립트를 자동 생성한다.
+
+## Target Users
+
+**1차 사용자 — 콘텐츠 크리에이터 (김민준)**
+- 영어 어원 기반 교육 유튜브 채널 운영
+- 어원 풀이 설명 텍스트를 이미 보유하고 있음
+- 스크립트 작성 병목을 자동화하고 싶음
+- Python 환경 운영 가능, LangGraph 경험 없음
+
+**최종 소비자 — 한국인 시청자**
+- 영어를 공부하는 한국인
+- 짧고 임팩트 있는 방식으로 영단어를 기억에 오래 남기길 원함
+
+## Success Metrics
+
+| 지표 | 목표값 |
+|------|--------|
+| 스크립트 생성 소요 시간 | invoke 후 30초 이내 |
+| 쇼츠 포맷 준수율 | 낭독 45~60초 분량 (한국어 200~260자) 100% |
+| 품질 자동 통과율 | ≥ 90% (재시도 포함) |
+| 4+1 섹션 구조 준수율 | 100% |
+| LLM 평균 재시도 횟수 | ≤ 1회 |
+
+---
+
+# Core Features
+
+## Feature 1: 입력 유효성 검증
+
+**무엇을 하는가**
+`word`, `korean_meaning`, `etymology_explanation` 세 필드의 존재 여부와 최소 품질 기준을 검사하고 State를 초기화한다.
+
+**왜 중요한가**
+불완전한 입력이 LLM에 전달되면 생성 품질이 급격히 저하된다. 파이프라인 진입 전 게이트 역할로 후속 노드의 안정성을 보장한다.
+
+**동작 방식**
+Pydantic 모델로 입력을 파싱한다. 검증 실패 시 즉시 에러 메시지와 함께 파이프라인을 종료하고, 통과 시 `ScriptState`를 초기값으로 세팅한다.
+
+검증 규칙:
+- `word`, `korean_meaning`, `etymology_explanation` 세 필드 모두 존재
+- `etymology_explanation` 최소 30자 이상
+- `korean_meaning` 최소 1개 이상
+
+---
+
+## Feature 2: 스크립트 초안 생성
+
+**무엇을 하는가**
+검증된 입력과 시스템 프롬프트를 결합해 LLM을 호출하고, 4+1 섹션 구조의 한국어 스크립트 초안을 JSON으로 생성한다.
+
+**왜 중요한가**
+파이프라인의 핵심 가치 생성 단계다. 어원의 라틴어/그리스어 어근을 구체적인 일상 이미지로 연결하는 스토리텔링이 기억 보존율을 높인다.
+
+**동작 방식**
+시스템 프롬프트에 섹션 구조, 글자 수 제한, 구어체 지침, few-shot 예시를 포함한다. LLM 응답은 JSON으로 파싱하며, 파싱 실패 시 raw text fallback으로 처리한다. `quality_reviewer` 재시도 시에는 `review_feedback`을 프롬프트에 추가한다.
+
+**4+1 섹션 구조**
+
+| 섹션 | 이름 | 역할 | 목표 길이 |
+|------|------|------|-----------|
+| 0 | 훅 (Hook) | 시청자 주의 즉시 확보 | 1~2문장 |
+| 1 | 어원 (Etymology) | 어근과 원래 의미 설명 | 2~3문장 |
+| 2 | 맥락 (Context) | 어원과 현재 의미의 연결 | 1~2문장 |
+| 3 | 기억 고리 (Memory Anchor) | 구체적 이미지로 기억 고정 | 1~2문장 |
+| 4 | 클로징 (Closing) | 단어 + 뜻 재확인 | 1문장 |
+
+---
+
+## Feature 3: 품질 자동 검토
+
+**무엇을 하는가**
+생성된 스크립트 초안의 구조 준수 여부, 글자 수, 어원 키워드 포함 여부를 자동으로 검사하고 통과/재시도 여부를 결정한다.
+
+**왜 중요한가**
+LLM 출력은 비결정적이다. 자동 품질 게이트 없이는 섹션 누락, 글자 수 초과 등의 불량 스크립트가 최종 출력될 수 있다.
+
+**동작 방식**
+체크리스트를 순서대로 실행한다. 실패 시 피드백 메시지를 State에 저장하고 `script_generator`로 재시도를 유도한다. 최대 2회 재시도 후에도 실패하면 `quality_passed: false` 플래그와 함께 강제 통과한다.
+
+품질 체크리스트:
+- 5개 섹션(hook, etymology, context, memory_anchor, closing) 모두 존재
+- 전체 글자 수 200~260자 범위 내
+- `etymology` 섹션에 어원 키워드(어근, 라틴어, 그리스어 등) 포함
+- `memory_anchor` 섹션에 구체적 상황/이미지 묘사 포함
+
+---
+
+## Feature 4: 최종 포맷 조합
+
+**무엇을 하는가**
+검토를 통과한 섹션들을 병합해 `full_script`를 생성하고, 낭독 예상 시간과 `quality_score`를 계산해 최종 출력 객체를 반환한다.
+
+**왜 중요한가**
+다운스트림(TTS, 자막 생성 등)에서 바로 사용할 수 있는 표준화된 출력 형식을 보장한다.
+
+**동작 방식**
+섹션을 고정 순서로 병합한다. 한국어 평균 낭독 속도(분당 270자)를 기준으로 `estimated_duration_sec`을 계산한다. `quality_score`는 품질 체크리스트 통과 항목 비율(0.0~1.0)로 산정한다.
+
+---
+
+# User Experience
+
+## User Persona
+
+**김민준 — 어원 영단어 유튜버**
+- 어원 설명 텍스트 DB 보유, 영상 제작 파이프라인에서 스크립트 작성이 병목
+- Python 코드 실행 가능, LangGraph 경험 없음
+- 원하는 것: 단어 데이터를 넣으면 쇼츠용 스크립트가 바로 나오는 것
+
+## Key User Flow
+
+```
+1. 단어 데이터 준비
+   word="ambiguous"
+   korean_meaning="모호한, 애매한"
+   etymology_explanation="라틴어 ambiguus에서 유래. ambi(양쪽) + agere(이끌다)..."
+
+2. 파이프라인 invoke (v0.1: Python 직접 호출)
+   result = graph.invoke({
+     "word": "ambiguous",
+     "korean_meaning": "모호한, 애매한",
+     "etymology_explanation": "..."
+   })
+
+3. 자동 처리 (30초 이내)
+   input_validator → script_generator → quality_reviewer → formatter
+   (품질 미달 시: quality_reviewer → script_generator 재시도, 최대 2회)
+
+4. 최종 스크립트 수령
+   result["full_script"]             # 전체 스크립트
+   result["estimated_duration_sec"]  # 낭독 예상 시간
+   result["quality_passed"]          # 품질 통과 여부
+
+5. 스크립트 검토 후 TTS/영상 제작에 활용
+```
+
+## UI/UX 고려사항
+
+- **v0.1**: CLI / Python 직접 invoke (UI 없음)
+- **투명성**: `retry_count`, `review_feedback`을 State에 노출해 디버깅 가능
+- **실패 안내**: `quality_passed: false` 시 수동 검토 필요성을 출력에 명시
+
+---
+
+# Technical Architecture
+
+## System Components
+
+```
+[Invoke Input]
+      │
+      ▼
+┌─────────────────────┐
+│   input_validator   │  Pydantic 검증, State 초기화
+└──────────┬──────────┘
+           │ valid
+           ▼
+┌─────────────────────┐
+│  script_generator   │  Claude API 호출, JSON 파싱, 섹션 초안 생성
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  quality_reviewer   │  체크리스트 검사, 피드백 생성
+└──────────┬──────────┘
+      통과  │  미통과 + retry < 2
+           │◄──────────────────────[script_generator 재호출]
+           ▼
+┌─────────────────────┐
+│     formatter       │  섹션 병합, 시간 계산, quality_score 산정
+└──────────┬──────────┘
+           │
+           ▼
+    [ScriptOutput 반환]
+```
+
+## Data Models
+
+### 입력 스키마 (ScriptInput)
+
+```python
+class ScriptInput(BaseModel):
+    word: str                    # 영어 단어
+    korean_meaning: str          # 한국어 뜻
+    etymology_explanation: str   # 어원 및 배경 설명 (최소 30자)
+```
+
+### 그래프 State (ScriptState)
+
+```python
+class ScriptState(TypedDict):
+    # 입력
+    word: str
+    korean_meaning: str
+    etymology_explanation: str
+
+    # 중간 상태
+    draft_script: dict      # {"hook": ..., "etymology": ..., "context": ...,
+                            #  "memory_anchor": ..., "closing": ...}
+    retry_count: int        # quality_reviewer 재시도 횟수 (max 2)
+    quality_passed: bool    # 품질 검토 통과 여부
+    review_feedback: str    # 미통과 시 피드백 (재생성 프롬프트에 삽입)
+
+    # 최종 출력
+    full_script: str
+    estimated_duration_sec: int
+    quality_score: float    # 0.0 ~ 1.0
+```
+
+### 출력 스키마 예시
+
+```json
+{
+  "word": "ambiguous",
+  "script": {
+    "hook": "여러분, 'ambiguous'라는 단어 들어보셨나요?",
+    "etymology": "라틴어에서 왔어요. ambi는 '양쪽', agere는 '이끌다'라는 뜻이에요.",
+    "context": "양쪽으로 동시에 이끌리는 상황 — 어느 쪽인지 모르겠는 그 느낌이 바로 이 단어예요.",
+    "memory_anchor": "갈림길에서 어느 쪽으로 가야 할지 모를 때, 그게 바로 ambiguous한 거예요.",
+    "closing": "오늘의 단어, ambiguous — '모호한'. 꼭 기억하세요!"
+  },
+  "full_script": "여러분, 'ambiguous'라는 단어 들어보셨나요? ...",
+  "estimated_duration_sec": 52,
+  "quality_score": 0.91,
+  "quality_passed": true
+}
+```
+
+## Repository Structure
+
+```
+shorts-script-generator/
+├── src/
+│   ├── config/
+│   │   └── settings.py          # 상수 및 환경 설정
+│   ├── schemas/
+│   │   ├── input.py             # ScriptInput Pydantic 모델
+│   │   ├── output.py            # ScriptOutput Pydantic 모델
+│   │   └── state.py             # ScriptState TypedDict
+│   ├── nodes/
+│   │   ├── input_validator.py   # Feature: 입력 유효성 검증
+│   │   ├── script_generator.py  # Feature: 스크립트 초안 생성
+│   │   ├── quality_reviewer.py  # Feature: 품질 자동 검토
+│   │   └── formatter.py         # Feature: 최종 포맷 조합
+│   ├── prompts/
+│   │   └── script_prompt.py     # 시스템 프롬프트 템플릿
+│   └── graph.py                 # LangGraph 그래프 조립 및 엣지 정의
+├── tests/
+│   ├── unit/
+│   │   ├── test_input_validator.py
+│   │   ├── test_script_generator.py
+│   │   ├── test_quality_reviewer.py
+│   │   └── test_formatter.py
+│   ├── integration/
+│   │   └── test_graph_e2e.py
+│   └── fixtures/
+│       └── sample_words.json    # 테스트용 단어 데이터
+├── docs/
+│   └── usage.md
+└── main.py                      # CLI invoke 진입점
+```
+
+## APIs and Integrations
+
+| 연동 대상 | 용도 | 비고 |
+|-----------|------|------|
+| Anthropic Claude API | 스크립트 생성 LLM | `ANTHROPIC_API_KEY` 환경변수 필요 |
+| LangGraph | 그래프 오케스트레이션 | `langgraph >= 0.2` |
+| Pydantic v2 | 입출력 스키마 검증 | |
+
+## Infrastructure Requirements
+
+- Python 3.11+
+- 로컬 실행 (v0.1 기준 외부 인프라 불필요)
+- 환경변수: `ANTHROPIC_API_KEY`
+
+---
+
+# Development Roadmap
+
+## Phase 0: Foundation — 스키마 및 설정 정의
+
+**목표**: 모든 노드가 공유하는 데이터 구조와 상수를 확립한다. 이후 모든 Phase의 기반이 되는 레이어.
+
+**Entry Criteria**: 빈 레포지토리, Python 환경 및 의존성 설치 완료
+
+**포함 범위**:
+- `ScriptState` TypedDict 정의 (`src/schemas/state.py`)
+- `ScriptInput` / `ScriptOutput` Pydantic 모델 정의 (`src/schemas/`)
+- `settings.py`: 최대 재시도 횟수, 글자 수 범위(200~260자), 낭독 속도(270자/분) 등 상수
+- LangGraph 그래프 뼈대 생성 — 노드 미연결, 빈 그래프 객체 (`src/graph.py`)
+
+**Exit Criteria**: 스키마 import 에러 없이 동작, `ScriptState` 초기화 가능
+
+---
+
+## Phase 1: Core Value — script_generator + formatter MVP
+
+**목표**: 입력을 받아 스크립트를 생성하고 `full_script`를 반환하는 최소 동작 파이프라인. 품질 검토 없이도 invoke → 결과 확인이 가능한 상태로, LLM 프롬프트 품질을 조기에 검증한다.
+
+**Entry Criteria**: Phase 0 완료
+
+**포함 범위**:
+- `prompts/script_prompt.py` — 프롬프트 템플릿 (섹션 구조, 글자 수 제한, 구어체 지침, few-shot 예시)
+- `nodes/script_generator.py`
+  - Claude API 호출 및 JSON 응답 파싱
+  - JSON 파싱 실패 시 raw text fallback
+- `nodes/formatter.py`
+  - 섹션 고정 순서 병합 → `full_script` 생성
+  - `estimated_duration_sec` 계산 (270자/분 기준)
+  - `quality_score` 기본값 1.0 처리
+- `graph.py`에 두 노드 연결 및 실행
+- `main.py` CLI 진입점 기본 구현
+
+**Exit Criteria**: `graph.invoke(valid_input)` 호출 시 `full_script`와 `estimated_duration_sec`이 포함된 출력 반환
+
+---
+
+## Phase 2: Robustness — input_validator + quality_reviewer 추가
+
+**목표**: 입력 오류와 LLM 품질 편차를 자동으로 처리하는 안정성 레이어 추가. 전체 4노드 파이프라인 완성.
+
+**Entry Criteria**: Phase 1 완료, LLM 출력 패턴 파악 완료
+
+**포함 범위**:
+- `nodes/input_validator.py`
+  - 필수 필드 존재 확인
+  - `etymology_explanation` 최소 길이(30자) 검사
+  - 검증 실패 시 즉시 종료 및 에러 메시지 반환
+- `nodes/quality_reviewer.py`
+  - 4+1 섹션 누락 여부 검사
+  - 전체 글자 수 범위(200~260자) 검사
+  - 어원 키워드 포함 여부 검사
+  - `memory_anchor` 구체성 검사
+  - 재시도 횟수 관리 (`MAX_RETRY = 2`), 초과 시 `quality_passed: false` + 강제 통과
+  - 실패 피드백 생성 → State `review_feedback`에 저장
+- `graph.py` 조건부 엣지 추가
+  - `quality_reviewer` 실패 → `script_generator` 루프
+  - `quality_reviewer` 통과 → `formatter`
+
+**Exit Criteria**: 불량 입력 → 즉시 에러 반환 / LLM 저품질 출력 → 자동 재시도 후 재생성 확인
+
+---
+
+## Phase 3: Hardening — 테스트 및 프롬프트 튜닝
+
+**목표**: 실제 단어 데이터 10개 이상으로 품질 검증, 테스트 코드 완성, 프롬프트 최적화.
+
+**Entry Criteria**: Phase 2 완료
+
+**포함 범위**:
+- `tests/fixtures/sample_words.json` — 테스트 단어 10개 준비
+- 단위 테스트 작성 (각 노드 독립 테스트)
+- 통합 테스트 작성 (전체 그래프 E2E)
+- `quality_reviewer` 실패 패턴 분석 → 시스템 프롬프트 개선
+- 글자 수 범위, 낭독 시간 목표 캘리브레이션
+- `docs/usage.md` 작성
+
+**Exit Criteria**: 10개 단어 중 9개 이상 `quality_passed: true`, 평균 생성 시간 30초 이내
+
+---
+
+## Out of Scope (v0.1)
+
+- TTS 연동 및 음성 파일 자동 생성
+- 이미지/영상 프롬프트 자동 생성
+- 단어 배치 처리 (다수 단어 동시 invoke)
+- 유튜브 자막(.srt) 자동 출력
+- Web UI / API 서버
+
+---
+
+# Logical Dependency Chain
+
+RPG Method의 핵심 원칙에 따라 Foundation → Core → Stability → Validation 순서로 위상 정렬된 의존성 체인을 정의한다.
+
+## Foundation Layer (Phase 0) — 선행 조건 없음
+
+| 모듈 | 제공하는 것 | 의존 |
+|------|-------------|------|
+| `config/settings.py` | 전역 상수 및 환경 설정 | 없음 |
+| `schemas/state.py` | `ScriptState` TypedDict | `config/settings.py` |
+| `schemas/input.py` | `ScriptInput` Pydantic 모델 | 없음 |
+| `schemas/output.py` | `ScriptOutput` Pydantic 모델 | `schemas/state.py` |
+
+모든 상위 레이어 모듈은 이 레이어에 의존한다. 이 레이어 없이는 어떤 노드도 구현 불가능하다.
+
+## Core Layer (Phase 1) — Phase 0 완료 후
+
+| 모듈 | 의존 | 이유 |
+|------|------|------|
+| `prompts/script_prompt.py` | `schemas/state.py` | State 필드를 프롬프트 템플릿에 삽입 |
+| `nodes/script_generator.py` | `schemas/state.py`, `prompts/`, `config/` | State 읽기·쓰기, 상수 참조 |
+| `nodes/formatter.py` | `schemas/state.py`, `schemas/output.py`, `config/` | `draft_script` 소비, 출력 생성 |
+| `graph.py` (2노드) | `script_generator`, `formatter` | 두 노드 연결 |
+
+**설계 의도**: `input_validator`와 `quality_reviewer` 없이도 Phase 1 완료 시점에 동작하는 MVP가 나온다. 이를 통해 LLM 프롬프트 품질을 조기에 검증하고, Phase 2 품질 기준을 실증 데이터 기반으로 설정할 수 있다.
+
+## Stability Layer (Phase 2) — Phase 1 완료 후
+
+| 모듈 | 의존 | 이유 |
+|------|------|------|
+| `nodes/input_validator.py` | `schemas/input.py`, `schemas/state.py`, `config/` | 입력 검증 후 State 초기화 |
+| `nodes/quality_reviewer.py` | `schemas/state.py`, `config/` | `draft_script` 검사, `review_feedback` 생성 |
+| `graph.py` (4노드 + 조건부 엣지) | 모든 노드 | 재시도 루프 조건부 엣지 추가 |
+
+**설계 의도**: `quality_reviewer`는 `script_generator`가 실제로 어떤 출력을 내는지 확인한 후에 체크리스트 기준을 정확히 설정할 수 있다. Phase 1 결과를 보고 기준을 조정하는 것이 올바른 순서다.
+
+## Validation Layer (Phase 3) — Phase 2 완료 후
+
+| 모듈 | 의존 | 이유 |
+|------|------|------|
+| `tests/unit/` | 각 노드 | 노드 독립 동작 검증 |
+| `tests/integration/` | `graph.py` (전체) | E2E 동작 검증 |
+| `prompts/script_prompt.py` (개선) | Phase 3 테스트 결과 | 실패 패턴 기반 프롬프트 튜닝 |
+
+---
+
+# Risks and Mitigations
+
+## Technical Risks
+
+**Risk 1: LLM JSON 파싱 실패**
+- **Impact**: High — 파이프라인 중단
+- **Likelihood**: Medium
+- **Mitigation**: JSON 블록 추출에 정규식 + 다중 파싱 시도 (Phase 1에서 구현)
+- **Fallback**: raw text를 `hook` 단일 섹션으로 처리하는 degraded mode, `quality_passed: false` 플래그 설정
+
+**Risk 2: 품질 기준과 LLM 출력 불일치**
+- **Impact**: Medium — 재시도 증가 → 응답 시간 저하
+- **Likelihood**: High (초기)
+- **Mitigation**: Phase 1 MVP 결과로 품질 기준 캘리브레이션 후 Phase 2 구현 (의존성 체인 설계 이유)
+- **Fallback**: 재시도 2회 초과 시 `quality_passed: false`로 수동 검토 유도
+
+**Risk 3: 글자 수 / 낭독 시간 불일치**
+- **Impact**: Low — 쇼츠 60초 초과
+- **Likelihood**: Medium
+- **Mitigation**: 프롬프트에 few-shot 예시 포함, 글자 수 제약 명시 (Phase 1)
+- **Fallback**: formatter에서 글자 수 초과 시 `closing` 섹션 단축 처리 (Phase 3)
+
+## Dependency Risks
+
+**Risk: Anthropic API 호출 실패 / Rate Limit**
+- **Impact**: High — 파이프라인 전체 중단
+- **Likelihood**: Low
+- **Mitigation**: `script_generator`에 retry with exponential backoff 적용
+- **Fallback**: 에러 메시지 포함한 `ScriptOutput` 반환 (graceful degradation)
+
+## Scope Risks
+
+**Risk: TTS/영상 자동화 기능 범위 확장 요구**
+- **Mitigation**: v0.1 범위를 "스크립트 텍스트 생성"으로 명확히 한정. Out of Scope 목록 명시.
+
+**Risk: 어원 설명 입력 품질 편차**
+- **Mitigation**: `input_validator`에서 최소 길이(30자) 강제. Phase 3에서 입력 가이드라인 문서화.
+
+---
+
+# Appendix
+
+## 스크립트 출력 예시
+
+```
+[hook]
+여러분, 'ambiguous'라는 단어 들어보셨나요?
+
+[etymology]
+이 단어는 라틴어에서 왔어요. ambi는 '양쪽', agere는 '이끌다'라는 뜻이에요.
+합치면 '양쪽으로 이끌린다'는 의미죠.
+
+[context]
+양쪽으로 동시에 이끌리는 상황 — 어느 쪽인지 확실히 결정되지 않은 상태가
+바로 이 단어예요.
+
+[memory_anchor]
+갈림길에서 어느 쪽으로 가야 할지 모를 때, 그게 바로 ambiguous한 거예요.
+
+[closing]
+오늘의 단어, ambiguous — '모호한'. 꼭 기억하세요!
+```
+
+## Technology Stack
+
+| 항목 | 선택 | 선정 이유 |
+|------|------|-----------|
+| 언어 | Python 3.11+ | LangGraph 공식 지원 환경 |
+| 오케스트레이션 | LangGraph ≥ 0.2 | 조건부 루프, State 관리에 적합 |
+| LLM | Claude Sonnet (Anthropic) | 구조화 JSON 출력 안정성 |
+| 스키마 검증 | Pydantic v2 | 타입 안전성, LangGraph 친화적 |
+| 테스트 | pytest | 표준 Python 테스트 프레임워크 |
+
+## Glossary
+
+| 용어 | 정의 |
+|------|------|
+| invoke | LangGraph 그래프의 동기 실행 진입점 |
+| 4+1 섹션 | hook / etymology / context / memory_anchor / closing 다섯 섹션 |
+| Memory Anchor | 어원 의미를 구체적 일상 이미지로 연결해 기억을 고정하는 섹션 |
+| quality_passed | `quality_reviewer`의 최종 판정 결과 (bool) |
+| ScriptState | LangGraph 노드 간 공유되는 상태 객체 |
+
+## Open Questions
+
+- [ ] 글자 수 기준(200~260자)이 낭독 45~60초와 실제로 정확히 매핑되는지 Phase 3에서 검증 필요
+- [ ] 동일 단어 재실행 시 동일 스크립트 생성 여부 — temperature 고정 필요성 결정 필요
+- [ ] 배치 처리(여러 단어 동시 invoke) 지원 범위 — v0.2 이후 검토
+- [ ] `review_feedback`의 구체성 수준이 재시도 품질에 얼마나 영향을 미치는지 실험 필요

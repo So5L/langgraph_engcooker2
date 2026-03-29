@@ -1,0 +1,834 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Project setup and dependencies installation",
+        "description": "Initialize Python project structure and install core dependencies (LangGraph ≥0.2, Pydantic v2, Anthropic SDK, pytest)",
+        "details": "Create project structure following the PRD repository layout:\n\n```bash\nmkdir -p src/{config,schemas,nodes,prompts} tests/{unit,integration,fixtures} docs\ntouch src/__init__.py src/config/__init__.py src/schemas/__init__.py src/nodes/__init__.py src/prompts/__init__.py\ntouch main.py\n```\n\nCreate pyproject.toml or requirements.txt:\n```toml\n[project]\nname = \"shorts-script-generator\"\nversion = \"0.1.0\"\nrequires-python = \">=3.11\"\ndependencies = [\n    \"langgraph>=0.2.0\",\n    \"langchain-anthropic>=0.1.0\",\n    \"pydantic>=2.0.0\",\n    \"anthropic>=0.18.0\",\n    \"python-dotenv>=1.0.0\"\n]\n\n[project.optional-dependencies]\ndev = [\n    \"pytest>=7.4.0\",\n    \"pytest-asyncio>=0.21.0\",\n    \"black>=23.0.0\",\n    \"ruff>=0.1.0\"\n]\n```\n\nUpdate .gitignore to include Python-specific patterns:\n```\n__pycache__/\n*.py[cod]\n*$py.class\n.pytest_cache/\n.venv/\nvenv/\n```\n\nCreate .env from .env.example with ANTHROPIC_API_KEY placeholder.",
+        "testStrategy": "Verify installation: `python -c \"import langgraph, pydantic, anthropic; print('✓ Dependencies installed')\"`. Ensure directory structure matches PRD specification.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create project directory structure with __init__.py files",
+            "description": "Create all required directories (src, config, schemas, nodes, prompts, tests, docs) and initialize Python packages with __init__.py files",
+            "dependencies": [],
+            "details": "Execute the directory creation commands to establish the project structure:\n- Create src/{config,schemas,nodes,prompts} directories\n- Create tests/{unit,integration,fixtures} and docs directories\n- Touch all __init__.py files in src and subdirectories\n- Create main.py entry point file\nThis establishes the foundation for the Python project following the PRD specification.",
+            "status": "pending",
+            "testStrategy": "Verify all directories exist using ls/tree command and confirm all __init__.py files are present in src/ and its subdirectories"
+          },
+          {
+            "id": 2,
+            "title": "Create pyproject.toml with dependencies and dev dependencies",
+            "description": "Define project metadata and specify core dependencies (LangGraph ≥0.2, Pydantic v2, Anthropic SDK) plus development tools in pyproject.toml",
+            "dependencies": [
+              1
+            ],
+            "details": "Create pyproject.toml with:\n- Project metadata (name: shorts-script-generator, version: 0.1.0, requires-python: >=3.11)\n- Core dependencies: langgraph>=0.2.0, langchain-anthropic>=0.1.0, pydantic>=2.0.0, anthropic>=0.18.0, python-dotenv>=1.0.0\n- Dev dependencies: pytest>=7.4.0, pytest-asyncio>=0.21.0, black>=23.0.0, ruff>=0.1.0\nThis defines all required packages for the project.",
+            "status": "pending",
+            "testStrategy": "Validate pyproject.toml syntax and verify it can be parsed. Attempt to install dependencies in a virtual environment to ensure all version constraints are satisfiable."
+          },
+          {
+            "id": 3,
+            "title": "Update .gitignore for Python-specific patterns",
+            "description": "Add Python-specific ignore patterns to .gitignore to exclude cache files, bytecode, virtual environments, and test artifacts",
+            "dependencies": [
+              1
+            ],
+            "details": "Update .gitignore to include Python patterns:\n- __pycache__/ directories\n- *.py[cod] and *$py.class bytecode files\n- .pytest_cache/ test cache\n- .venv/, venv/ virtual environment directories\n- Any other Python-related temporary files\nThis prevents committing generated files and local environment artifacts to version control.",
+            "status": "pending",
+            "testStrategy": "Verify .gitignore file exists and contains all required Python patterns. Use 'git status' to confirm pycache and venv directories would be ignored if created."
+          },
+          {
+            "id": 4,
+            "title": "Create .env file from .env.example and verify dependency installation",
+            "description": "Generate .env file with ANTHROPIC_API_KEY placeholder and validate that all dependencies can be successfully installed",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Final setup steps:\n- Create .env file from .env.example template with ANTHROPIC_API_KEY placeholder\n- Create/activate a virtual environment (python -m venv .venv)\n- Install dependencies using pip install -e .[dev] or pip install from pyproject.toml\n- Run verification command: python -c \"import langgraph, pydantic, anthropic; print('✓ Dependencies installed')\"\nThis completes the project initialization and confirms the environment is ready for development.",
+            "status": "pending",
+            "testStrategy": "Execute the verification import statement successfully. Confirm .env file exists with ANTHROPIC_API_KEY entry. Verify pip list shows all core dependencies with correct versions (langgraph>=0.2, pydantic>=2.0)."
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Define configuration and constants (settings.py)",
+        "description": "Create src/config/settings.py with all system constants: max retry count, character limits, reading speed, API settings",
+        "details": "Implement settings.py following Phase 0 requirements:\n\n```python\n# src/config/settings.py\nimport os\nfrom dotenv import load_dotenv\n\nload_dotenv()\n\nclass Settings:\n    # API Configuration\n    ANTHROPIC_API_KEY: str = os.getenv(\"ANTHROPIC_API_KEY\", \"\")\n    CLAUDE_MODEL: str = \"claude-sonnet-4-5-20250929\"  # Latest Claude model as of 2026\n    \n    # Script Generation Constants\n    MIN_CHAR_COUNT: int = 200\n    MAX_CHAR_COUNT: int = 260\n    TARGET_DURATION_MIN_SEC: int = 45\n    TARGET_DURATION_MAX_SEC: int = 60\n    \n    # Korean reading speed (characters per minute)\n    KOREAN_READING_SPEED: int = 270\n    \n    # Quality Review\n    MAX_RETRY_COUNT: int = 2\n    \n    # Input Validation\n    MIN_ETYMOLOGY_LENGTH: int = 30\n    MIN_KOREAN_MEANING_LENGTH: int = 1\n    \n    # Section Names\n    SECTION_NAMES = [\"hook\", \"etymology\", \"context\", \"memory_anchor\", \"closing\"]\n    \n    # LLM Generation\n    LLM_TEMPERATURE: float = 0.7\n    LLM_MAX_TOKENS: int = 1000\n    \nsettings = Settings()\n```\n\nValidate that all constants align with PRD success metrics.",
+        "testStrategy": "Unit test to verify: (1) All constants are accessible, (2) Environment variable loading works, (3) Character count range matches 200-260, (4) Reading speed is 270 chars/min, (5) Max retry is 2.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Settings class with all configuration constants",
+            "description": "Create the Settings class in src/config/settings.py with all system constants including API configuration, script generation limits, Korean reading speed, quality review settings, and LLM parameters",
+            "dependencies": [],
+            "details": "Implement the Settings class with the following constants: ANTHROPIC_API_KEY (from env), CLAUDE_MODEL (claude-sonnet-4-5-20250929), MIN_CHAR_COUNT (200), MAX_CHAR_COUNT (260), TARGET_DURATION_MIN_SEC (45), TARGET_DURATION_MAX_SEC (60), KOREAN_READING_SPEED (270), MAX_RETRY_COUNT (2), MIN_ETYMOLOGY_LENGTH (30), MIN_KOREAN_MEANING_LENGTH (1), SECTION_NAMES list, LLM_TEMPERATURE (0.7), and LLM_MAX_TOKENS (1000). Include type hints for all constants and add comments for clarity. Ensure all values align with PRD success metrics.",
+            "status": "pending",
+            "testStrategy": "Unit tests to verify: (1) All constants are accessible and have correct types, (2) Character count range is 200-260, (3) Reading speed is exactly 270 chars/min, (4) Max retry count is 2, (5) Duration range is 45-60 seconds, (6) SECTION_NAMES contains all 5 sections"
+          },
+          {
+            "id": 2,
+            "title": "Add environment variable loading with python-dotenv",
+            "description": "Implement environment variable loading functionality using python-dotenv to securely load the Anthropic API key and ensure proper configuration initialization",
+            "dependencies": [
+              1
+            ],
+            "details": "Add dotenv import and load_dotenv() call at the top of settings.py. Configure ANTHROPIC_API_KEY to load from environment variables with os.getenv() and provide empty string as default fallback. Create a settings singleton instance at module level for easy import. Ensure the .env file structure is documented with .env.example containing ANTHROPIC_API_KEY placeholder.",
+            "status": "pending",
+            "testStrategy": "Unit tests to verify: (1) dotenv successfully loads variables from .env file, (2) ANTHROPIC_API_KEY is retrieved correctly when set in environment, (3) Default empty string is used when env var is not set, (4) Settings singleton instance is importable and accessible"
+          },
+          {
+            "id": 3,
+            "title": "Create unit tests validating all constants against PRD requirements",
+            "description": "Develop comprehensive unit tests in tests/unit/test_settings.py to verify all configuration constants are accessible, properly typed, and meet PRD specifications",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create tests/unit/test_settings.py with test cases covering: (1) All Settings attributes are accessible and have expected values, (2) Type validation for each constant, (3) Character count constraints (MIN=200, MAX=260) match PRD, (4) Reading speed is 270 chars/min for Korean, (5) MAX_RETRY_COUNT is 2, (6) Duration range is 45-60 seconds, (7) SECTION_NAMES contains exactly 5 sections: hook, etymology, context, memory_anchor, closing, (8) LLM parameters are within reasonable ranges, (9) Environment variable loading works with mocked env vars. Use pytest framework and ensure 100% coverage for settings module.",
+            "status": "pending",
+            "testStrategy": "Run pytest tests/unit/test_settings.py and verify: (1) All test cases pass, (2) Code coverage for settings.py is 100%, (3) Tests validate PRD alignment for all critical constants, (4) Mock environment variables work correctly in isolated test environment"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Define data schemas (ScriptState, ScriptInput, ScriptOutput)",
+        "description": "Create Pydantic models and TypedDict for ScriptInput, ScriptOutput, and ScriptState following PRD specifications",
+        "details": "Implement schemas as per Phase 0:\n\n```python\n# src/schemas/input.py\nfrom pydantic import BaseModel, Field\n\nclass ScriptInput(BaseModel):\n    word: str = Field(..., min_length=1, description=\"English word\")\n    korean_meaning: str = Field(..., min_length=1, description=\"Korean meaning\")\n    etymology_explanation: str = Field(\n        ..., \n        min_length=30, \n        description=\"Etymology and background explanation (minimum 30 characters)\"\n    )\n\n# src/schemas/state.py\nfrom typing import TypedDict\n\nclass ScriptState(TypedDict, total=False):\n    # Input fields\n    word: str\n    korean_meaning: str\n    etymology_explanation: str\n    \n    # Intermediate state\n    draft_script: dict[str, str]  # {\"hook\": ..., \"etymology\": ..., etc.}\n    retry_count: int\n    quality_passed: bool\n    review_feedback: str\n    \n    # Final output\n    full_script: str\n    estimated_duration_sec: int\n    quality_score: float\n\n# src/schemas/output.py\nfrom pydantic import BaseModel, Field\nfrom typing import Dict\n\nclass ScriptOutput(BaseModel):\n    word: str\n    script: Dict[str, str] = Field(\n        description=\"Section-wise script: hook, etymology, context, memory_anchor, closing\"\n    )\n    full_script: str = Field(description=\"Complete merged script text\")\n    estimated_duration_sec: int = Field(description=\"Estimated reading duration in seconds\")\n    quality_score: float = Field(ge=0.0, le=1.0, description=\"Quality score 0.0-1.0\")\n    quality_passed: bool = Field(description=\"Whether script passed quality checks\")\n```\n\nEnsure TypedDict uses total=False for optional fields.",
+        "testStrategy": "Unit tests: (1) Validate ScriptInput with valid/invalid data, (2) Ensure minimum length constraints work, (3) Test ScriptState initialization, (4) Verify ScriptOutput model validation and field constraints.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create ScriptInput Pydantic model with field validation",
+            "description": "Implement the ScriptInput Pydantic model in src/schemas/input.py with all required fields and validation constraints",
+            "dependencies": [],
+            "details": "Create src/schemas/input.py and implement ScriptInput BaseModel with three fields: word (min_length=1), korean_meaning (min_length=1), and etymology_explanation (min_length=30). Each field should use Field() with appropriate constraints and descriptions. Ensure Pydantic v2 compatibility and proper imports from pydantic BaseModel and Field.",
+            "status": "pending",
+            "testStrategy": "Unit tests validating: (1) Valid inputs are accepted, (2) Empty strings are rejected, (3) etymology_explanation shorter than 30 characters fails validation, (4) Field descriptions are accessible, (5) Model can be instantiated and serialized to JSON"
+          },
+          {
+            "id": 2,
+            "title": "Define ScriptState TypedDict with intermediate fields",
+            "description": "Create ScriptState TypedDict in src/schemas/state.py with all input, intermediate, and output fields using total=False for optional fields",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement src/schemas/state.py with ScriptState TypedDict containing: input fields (word, korean_meaning, etymology_explanation), intermediate state fields (draft_script as dict[str, str], retry_count as int, quality_passed as bool, review_feedback as str), and final output fields (full_script as str, estimated_duration_sec as int, quality_score as float). Use TypedDict with total=False to allow optional fields as LangGraph state evolves during execution.",
+            "status": "pending",
+            "testStrategy": "Unit tests verifying: (1) ScriptState can be instantiated with partial fields, (2) Type hints are correctly defined, (3) draft_script accepts dict[str, str] structure, (4) All field types match specifications, (5) TypedDict total=False allows incremental state building"
+          },
+          {
+            "id": 3,
+            "title": "Create ScriptOutput Pydantic model with quality metrics",
+            "description": "Implement ScriptOutput Pydantic model in src/schemas/output.py with script sections, quality score validation, and duration estimation",
+            "dependencies": [
+              1
+            ],
+            "details": "Create src/schemas/output.py with ScriptOutput BaseModel containing: word (str), script (Dict[str, str] for section-wise content), full_script (str for merged text), estimated_duration_sec (int), quality_score (float with ge=0.0, le=1.0 constraints), and quality_passed (bool). Ensure proper Field descriptions and validation constraints, particularly the 0.0-1.0 range for quality_score using ge/le validators.",
+            "status": "pending",
+            "testStrategy": "Unit tests checking: (1) Valid ScriptOutput with all fields passes validation, (2) quality_score outside 0.0-1.0 range raises ValidationError, (3) script dict accepts string keys/values, (4) Model serialization to/from JSON works correctly, (5) Field constraints are enforced"
+          },
+          {
+            "id": 4,
+            "title": "Write comprehensive validation tests for all schemas",
+            "description": "Create comprehensive unit test suite in tests/unit/test_schemas.py covering all three schema models with valid/invalid data scenarios",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Implement tests/unit/test_schemas.py with pytest test cases for: (1) ScriptInput validation with edge cases (empty strings, exactly 30 chars for etymology, unicode characters), (2) ScriptState TypedDict initialization with partial and complete data, (3) ScriptOutput validation including boundary testing for quality_score (0.0, 0.5, 1.0, -0.1, 1.1), (4) Cross-schema integration ensuring ScriptState can hold ScriptInput data and produce ScriptOutput data, (5) JSON serialization/deserialization round-trips for Pydantic models.",
+            "status": "pending",
+            "testStrategy": "Execute pytest tests/unit/test_schemas.py with coverage report. Verify: (1) All constraint validations work correctly, (2) Invalid data raises appropriate ValidationError with clear messages, (3) Test coverage ≥95% for all schema files, (4) Edge cases are properly handled, (5) Tests run in <2 seconds total"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Create system prompt template for script generation",
+        "description": "Design and implement the LLM system prompt with 4+1 section structure, character limits, tone guidelines, and few-shot examples",
+        "details": "Implement prompts/script_prompt.py for Phase 1:\n\n```python\n# src/prompts/script_prompt.py\nfrom src.schemas.state import ScriptState\n\nSYSTEM_PROMPT_TEMPLATE = \"\"\"\n당신은 영어 어원을 기반으로 유튜브 쇼츠용 한국어 교육 스크립트를 작성하는 전문가입니다.\n\n**목표**: 45-60초 분량의 기억에 남는 스크립트 생성 (한국어 200-260자)\n\n**필수 구조 (4+1 섹션)**:\n1. hook: 시청자 주의를 즉시 끄는 1-2문장\n2. etymology: 어근과 원래 의미 설명 (2-3문장)\n3. context: 어원과 현재 의미의 연결 (1-2문장)\n4. memory_anchor: 구체적 일상 이미지로 기억 고정 (1-2문장)\n5. closing: 단어+뜻 재확인 (1문장)\n\n**스타일 가이드**:\n- 친근한 구어체 사용 (\"여러분\", \"~이에요\", \"~하죠\")\n- 전문 용어 최소화, 일상적 비유 활용\n- 각 섹션은 자연스럽게 연결\n- 전체 글자 수: 200-260자 (엄수)\n\n**Few-shot 예시**:\n\n예시 1 - \"ambiguous\" (모호한)\nInput: {\"word\": \"ambiguous\", \"korean_meaning\": \"모호한, 애매한\", \"etymology_explanation\": \"라틴어 ambiguus에서 유래. ambi(양쪽) + agere(이끌다)\"}\n\nOutput:\n{\n  \"hook\": \"여러분, 'ambiguous'라는 단어 들어보셨나요?\",\n  \"etymology\": \"이 단어는 라틴어에서 왔어요. ambi는 '양쪽', agere는 '이끌다'라는 뜻이에요. 합치면 '양쪽으로 이끌린다'는 의미죠.\",\n  \"context\": \"양쪽으로 동시에 이끌리는 상황 — 어느 쪽인지 확실히 결정되지 않은 상태가 바로 이 단어예요.\",\n  \"memory_anchor\": \"갈림길에서 어느 쪽으로 가야 할지 모를 때, 그게 바로 ambiguous한 거예요.\",\n  \"closing\": \"오늘의 단어, ambiguous — '모호한'. 꼭 기억하세요!\"\n}\n\n---\n\n이제 다음 단어에 대한 스크립트를 작성하세요.\n**반드시 유효한 JSON 형식으로 응답하세요.**\n\"\"\"\n\ndef build_generation_prompt(\n    state: ScriptState,\n    retry_feedback: str = \"\"\n) -> str:\n    \"\"\"Build the final prompt for LLM script generation.\"\"\"\n    \n    user_prompt = f\"\"\"\n단어: {state['word']}\n한국어 뜻: {state['korean_meaning']}\n어원 설명: {state['etymology_explanation']}\n\"\"\"\n    \n    if retry_feedback:\n        user_prompt += f\"\\n\\n**이전 생성 피드백**:\\n{retry_feedback}\\n위 피드백을 반영하여 다시 작성하세요.\"\n    \n    return SYSTEM_PROMPT_TEMPLATE + \"\\n\" + user_prompt\n```\n\nEnsure few-shot examples are concrete and match PRD character count.",
+        "testStrategy": "Validation: (1) Prompt template includes all 5 sections, (2) Character limit (200-260) is clearly stated, (3) Few-shot example is valid JSON, (4) build_generation_prompt() correctly incorporates retry_feedback when provided.",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Write base SYSTEM_PROMPT_TEMPLATE with 4+1 section structure",
+            "description": "Create the foundational system prompt template in Korean with clear section definitions (hook, etymology, context, memory_anchor, closing), character count guidelines (200-260 total), and style guide emphasizing conversational tone and everyday examples",
+            "dependencies": [],
+            "details": "Implement SYSTEM_PROMPT_TEMPLATE constant in src/prompts/script_prompt.py. Include comprehensive Korean instructions specifying: target audience (YouTube Shorts viewers), 45-60 second duration constraint, 4+1 mandatory section structure with sentence count guidelines per section, style requirements (친근한 구어체, minimize jargon, use daily life metaphors), and explicit character count enforcement (200-260 chars). Ensure all instructions are in Korean to maintain consistency with output language.",
+            "status": "pending",
+            "testStrategy": "Manual review: (1) All 5 sections (hook, etymology, context, memory_anchor, closing) are explicitly defined, (2) Character limit 200-260 is prominently stated, (3) Style guidelines include at least 3 specific tone/language directives, (4) Instructions are entirely in Korean"
+          },
+          {
+            "id": 2,
+            "title": "Create few-shot examples with valid JSON responses",
+            "description": "Develop 2-3 concrete few-shot examples demonstrating proper 4+1 section format, JSON structure, and character count compliance for different word types (e.g., ambiguous, etymology, one other word)",
+            "dependencies": [
+              1
+            ],
+            "details": "Add few-shot examples to SYSTEM_PROMPT_TEMPLATE showing input format (word, korean_meaning, etymology_explanation) and expected JSON output with all 5 sections. Each example must: (1) use different word complexity levels, (2) demonstrate proper Korean conversational tone, (3) stay within 200-260 character total, (4) show valid JSON formatting with proper escaping. Include the 'ambiguous' example from parent task details and add 1-2 more diverse examples (e.g., abstract vs concrete words).",
+            "status": "pending",
+            "testStrategy": "Validation: (1) Each example includes input and output sections, (2) Output JSON is valid and parseable, (3) Character count per example is 200-260, (4) At least 2 examples are provided with different word types, (5) All Korean text uses proper conversational markers (여러분, ~이에요, ~하죠)"
+          },
+          {
+            "id": 3,
+            "title": "Implement build_generation_prompt() with retry feedback",
+            "description": "Create the build_generation_prompt() function that combines system template with user inputs (word, meaning, etymology) and optionally incorporates retry feedback for regeneration attempts",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implement build_generation_prompt(state: ScriptState, retry_feedback: str = '') function in src/prompts/script_prompt.py. Function should: (1) accept ScriptState containing word, korean_meaning, etymology_explanation, (2) format user prompt with these values, (3) conditionally append retry feedback section when provided (with clear Korean instructions to address previous issues), (4) return concatenated system + user prompt string. Ensure proper string formatting and newline handling for LLM readability.",
+            "status": "pending",
+            "testStrategy": "Unit test: (1) Function returns string containing SYSTEM_PROMPT_TEMPLATE, (2) User prompt includes all three state fields (word, korean_meaning, etymology_explanation), (3) When retry_feedback is provided, output contains feedback section with '이전 생성 피드백' marker, (4) When retry_feedback is empty, no feedback section appears"
+          },
+          {
+            "id": 4,
+            "title": "Validate character counts in few-shot examples",
+            "description": "Verify that all few-shot example outputs strictly adhere to the 200-260 character count requirement by implementing character counting logic and adjusting examples as needed",
+            "dependencies": [
+              2
+            ],
+            "details": "Write validation script or manual check to count total characters across all 5 sections (hook + etymology + context + memory_anchor + closing) for each few-shot example. Korean character counting should exclude JSON formatting characters (quotes, commas, braces) and count only the actual content strings. Adjust examples that fall outside 200-260 range by trimming verbose sections or expanding terse ones while maintaining natural flow and educational value.",
+            "status": "pending",
+            "testStrategy": "Manual validation: (1) Create character counting function that sums lengths of all 5 section values, (2) Every few-shot example output totals between 200-260 characters (Korean content only), (3) Document actual character counts for each example in code comments, (4) No example deviates by more than 5 characters from target range midpoint (230 chars)"
+          },
+          {
+            "id": 5,
+            "title": "Test prompt with manual Claude API call",
+            "description": "Validate end-to-end prompt quality by making test API calls to Claude with the finalized prompt template using sample word inputs and evaluating output quality against PRD criteria",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Create test script (e.g., tests/manual/test_prompt_quality.py) that: (1) imports build_generation_prompt(), (2) constructs ScriptState with 2-3 test words (including 'ambiguous' and one new word), (3) makes direct Anthropic API calls using ANTHROPIC_API_KEY from settings, (4) parses JSON responses, (5) validates outputs have all 5 sections, proper character counts, conversational tone, and educational clarity. Document any prompt refinements needed based on actual LLM behavior (e.g., tendency to exceed char limits, JSON formatting errors).",
+            "status": "pending",
+            "testStrategy": "Integration test: (1) API call succeeds without errors, (2) Response is valid JSON with 5 required keys, (3) Total character count is 200-260, (4) Korean text uses conversational markers, (5) Etymology section accurately reflects input etymology_explanation, (6) Manual review confirms output is engaging and educational"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Implement script_generator node (LLM invocation and JSON parsing)",
+        "description": "Create script_generator node that calls Claude API, parses JSON response, and handles fallback for parsing failures",
+        "details": "Implement nodes/script_generator.py for Phase 1:\n\n```python\n# src/nodes/script_generator.py\nimport json\nimport re\nfrom typing import Dict\nfrom anthropic import Anthropic\nfrom src.config.settings import settings\nfrom src.schemas.state import ScriptState\nfrom src.prompts.script_prompt import build_generation_prompt\n\nclient = Anthropic(api_key=settings.ANTHROPIC_API_KEY)\n\ndef script_generator(state: ScriptState) -> Dict:\n    \"\"\"Generate script draft using Claude API.\"\"\"\n    \n    # Build prompt with optional retry feedback\n    retry_feedback = state.get(\"review_feedback\", \"\")\n    prompt = build_generation_prompt(state, retry_feedback)\n    \n    # Call Claude API\n    response = client.messages.create(\n        model=settings.CLAUDE_MODEL,\n        max_tokens=settings.LLM_MAX_TOKENS,\n        temperature=settings.LLM_TEMPERATURE,\n        messages=[{\n            \"role\": \"user\",\n            \"content\": prompt\n        }]\n    )\n    \n    raw_text = response.content[0].text\n    \n    # Attempt JSON parsing with fallback\n    draft_script = parse_llm_response(raw_text)\n    \n    return {\n        \"draft_script\": draft_script,\n        \"retry_count\": state.get(\"retry_count\", 0)\n    }\n\ndef parse_llm_response(raw_text: str) -> Dict[str, str]:\n    \"\"\"Parse LLM response with multiple fallback strategies.\"\"\"\n    \n    # Strategy 1: Direct JSON parse\n    try:\n        return json.loads(raw_text)\n    except json.JSONDecodeError:\n        pass\n    \n    # Strategy 2: Extract JSON block with regex\n    json_pattern = r'```json\\s*({[^`]+})\\s*```'\n    match = re.search(json_pattern, raw_text, re.DOTALL)\n    if match:\n        try:\n            return json.loads(match.group(1))\n        except json.JSONDecodeError:\n            pass\n    \n    # Strategy 3: Find any JSON object\n    json_object_pattern = r'{[^{}]*(?:{[^{}]*}[^{}]*)*}'\n    match = re.search(json_object_pattern, raw_text, re.DOTALL)\n    if match:\n        try:\n            return json.loads(match.group(0))\n        except json.JSONDecodeError:\n            pass\n    \n    # Fallback: Return raw text as single 'hook' section\n    return {\n        \"hook\": raw_text[:260],  # Truncate to max length\n        \"etymology\": \"\",\n        \"context\": \"\",\n        \"memory_anchor\": \"\",\n        \"closing\": \"\"\n    }\n```\n\nImplement exponential backoff retry for API failures.",
+        "testStrategy": "Unit tests: (1) Mock Claude API response with valid JSON, (2) Test JSON parsing with code block format, (3) Test fallback for unparseable response, (4) Verify retry_feedback is included in prompt, (5) Integration test with real API (optional, requires key).",
+        "priority": "high",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up basic script_generator function with Claude API client",
+            "description": "Create the script_generator.py file with imports, initialize Anthropic client, and implement the basic script_generator() function signature that accepts ScriptState",
+            "dependencies": [],
+            "details": "Create src/nodes/script_generator.py with all necessary imports (json, re, typing, anthropic, settings, state schema, prompt builder). Initialize the Anthropic client using settings.ANTHROPIC_API_KEY. Implement the script_generator(state: ScriptState) -> Dict function skeleton that extracts retry_feedback from state and calls build_generation_prompt(). This establishes the foundation for LLM integration.",
+            "status": "pending",
+            "testStrategy": "Unit test: Mock the Anthropic client initialization and verify the function accepts ScriptState properly. Test that retry_feedback is extracted from state correctly (both when present and absent)."
+          },
+          {
+            "id": 2,
+            "title": "Implement Claude API call with message formatting",
+            "description": "Add the client.messages.create() call with proper parameters (model, max_tokens, temperature) and extract the response text",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement the API call using client.messages.create() with settings.CLAUDE_MODEL, settings.LLM_MAX_TOKENS, and settings.LLM_TEMPERATURE. Format the message with role='user' and content=prompt. Extract raw_text from response.content[0].text. Return a dictionary with draft_script and retry_count fields. At this stage, pass raw_text directly without parsing.",
+            "status": "pending",
+            "testStrategy": "Unit test: Mock client.messages.create() to return a sample response object. Verify the API is called with correct parameters. Test that raw_text is extracted properly and retry_count is incremented from state."
+          },
+          {
+            "id": 3,
+            "title": "Create parse_llm_response with Strategy 1 (direct JSON parse)",
+            "description": "Implement parse_llm_response() function with direct JSON parsing as the first strategy, including try-except for JSONDecodeError",
+            "dependencies": [
+              2
+            ],
+            "details": "Create the parse_llm_response(raw_text: str) -> Dict[str, str] function. Implement Strategy 1 using json.loads(raw_text) wrapped in try-except JSONDecodeError. On success, return the parsed dictionary. On failure, pass to allow fallback strategies. Integrate this function into script_generator() to parse the raw_text before returning.",
+            "status": "pending",
+            "testStrategy": "Unit test: (1) Valid JSON string returns parsed dict, (2) Invalid JSON triggers JSONDecodeError and continues (doesn't crash), (3) Verify returned dict has expected structure with hook, etymology, context, memory_anchor, closing fields."
+          },
+          {
+            "id": 4,
+            "title": "Add Strategy 2 and 3 fallback parsing with regex patterns",
+            "description": "Implement regex-based fallback strategies to extract JSON from code blocks and find any JSON object in the response",
+            "dependencies": [
+              3
+            ],
+            "details": "Add Strategy 2: Use regex pattern r'```json\\s*({[^`]+})\\s*```' to extract JSON from markdown code blocks with re.search(). Add Strategy 3: Use pattern r'{[^{}]*(?:{[^{}]*}[^{}]*)*}' to find any JSON object in the text. Both strategies should attempt json.loads() on the match and continue to next strategy on failure. Add final fallback that returns a dict with hook=raw_text[:260] truncated and empty strings for other fields.",
+            "status": "pending",
+            "testStrategy": "Unit test: (1) JSON in ```json code block is extracted correctly, (2) Bare JSON object without code block is found, (3) Completely unparseable text triggers fallback with truncated hook field, (4) Nested JSON objects are handled properly, (5) All strategies fail gracefully without raising exceptions."
+          },
+          {
+            "id": 5,
+            "title": "Implement exponential backoff retry for API failures",
+            "description": "Add retry logic with exponential backoff to handle API rate limits, transient errors, and network failures",
+            "dependencies": [
+              2
+            ],
+            "details": "Wrap the client.messages.create() call in a retry loop with exponential backoff. Catch anthropic.APIError and implement retry logic: max_retries=3, initial wait=1s, exponential multiplier=2 (1s, 2s, 4s). Handle specific errors like RateLimitError, APIConnectionError. Use time.sleep() for backoff delays. Log retry attempts for debugging. On final failure after max retries, raise the exception with context.",
+            "status": "pending",
+            "testStrategy": "Unit test: (1) Mock API to raise RateLimitError on first 2 calls, succeed on 3rd - verify 3 attempts made, (2) Verify exponential backoff timing (1s, 2s, 4s), (3) Test that non-retryable errors fail immediately, (4) Test max retries exceeded raises exception, (5) Verify successful first call doesn't trigger retry."
+          },
+          {
+            "id": 6,
+            "title": "Write comprehensive unit tests with mocked API responses",
+            "description": "Create complete test suite covering all success paths, failure modes, parsing strategies, and edge cases",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "Create tests/unit/test_script_generator.py with comprehensive test cases: (1) Mock successful API response with valid JSON, (2) Test JSON in code block format, (3) Test unparseable response triggers fallback, (4) Verify retry_feedback inclusion in prompt, (5) Test API retry logic with rate limits, (6) Test all three parsing strategies independently, (7) Test state updates (retry_count increment), (8) Test truncation in fallback strategy, (9) Edge cases: empty response, malformed JSON, network errors. Use pytest with pytest-mock for mocking.",
+            "status": "pending",
+            "testStrategy": "Run pytest tests/unit/test_script_generator.py with coverage report. Aim for >90% code coverage. Verify all error paths are tested. Test both integration (full script_generator flow) and unit tests (parse_llm_response in isolation)."
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Implement formatter node (section merging and metadata calculation)",
+        "description": "Create formatter node that merges sections into full_script, calculates estimated_duration_sec and quality_score",
+        "details": "Implement nodes/formatter.py for Phase 1:\n\n```python\n# src/nodes/formatter.py\nfrom typing import Dict\nfrom src.config.settings import settings\nfrom src.schemas.state import ScriptState\n\ndef formatter(state: ScriptState) -> Dict:\n    \"\"\"Merge sections and calculate final metadata.\"\"\"\n    \n    draft_script = state.get(\"draft_script\", {})\n    \n    # Merge sections in fixed order\n    section_order = settings.SECTION_NAMES\n    merged_sections = []\n    \n    for section_name in section_order:\n        section_text = draft_script.get(section_name, \"\").strip()\n        if section_text:\n            merged_sections.append(section_text)\n    \n    full_script = \"\\n\\n\".join(merged_sections)\n    \n    # Calculate estimated duration (Korean reading speed: 270 chars/min)\n    char_count = len(full_script.replace(\"\\n\", \"\").replace(\" \", \"\"))\n    estimated_duration_sec = int((char_count / settings.KOREAN_READING_SPEED) * 60)\n    \n    # Calculate quality score (will be refined in Phase 2)\n    quality_passed = state.get(\"quality_passed\", True)\n    quality_score = 1.0 if quality_passed else 0.0\n    \n    return {\n        \"full_script\": full_script,\n        \"estimated_duration_sec\": estimated_duration_sec,\n        \"quality_score\": quality_score\n    }\n```\n\nEnsure section ordering matches PRD: hook → etymology → context → memory_anchor → closing.",
+        "testStrategy": "Unit tests: (1) Verify sections are merged in correct order, (2) Test duration calculation (e.g., 270 chars = 60 seconds), (3) Handle missing sections gracefully, (4) Verify quality_score defaults to 1.0 when quality_passed is True.",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement section merging logic with fixed order",
+            "description": "Create the core section merging functionality in formatter.py that combines script sections in the correct order (hook → etymology → context → memory_anchor → closing) and handles empty/missing sections gracefully",
+            "dependencies": [],
+            "details": "Implement the section merging logic in nodes/formatter.py: (1) Retrieve draft_script from state, (2) Use settings.SECTION_NAMES for fixed ordering, (3) Iterate through sections and collect non-empty ones, (4) Strip whitespace from each section, (5) Join sections with double newlines (\\n\\n), (6) Return full_script string. Handle edge cases where sections are missing or empty by skipping them without breaking the merge.",
+            "status": "pending",
+            "testStrategy": "Unit tests: (1) Verify all 5 sections merge in correct order when all present, (2) Test with missing middle section (e.g., no context), (3) Test with empty string sections, (4) Test with only 1 section present, (5) Verify double newline separators between sections"
+          },
+          {
+            "id": 2,
+            "title": "Add estimated_duration_sec calculation based on Korean reading speed",
+            "description": "Implement duration calculation logic using Korean reading speed of 270 characters per minute, converting character count to estimated duration in seconds",
+            "dependencies": [
+              1
+            ],
+            "details": "Add duration calculation to formatter function: (1) Count characters in full_script excluding newlines and spaces using len(full_script.replace('\\n', '').replace(' ', '')), (2) Apply formula: (char_count / 270) * 60 to get seconds, (3) Convert to integer using int(), (4) Use settings.KOREAN_READING_SPEED constant (270) instead of hardcoding, (5) Return estimated_duration_sec in output dictionary. Ensure accuracy is maintained for various script lengths (100-500 characters typical range).",
+            "status": "pending",
+            "testStrategy": "Unit tests: (1) Test 270 chars = 60 seconds exactly, (2) Test 135 chars = 30 seconds, (3) Test 540 chars = 120 seconds, (4) Verify spaces and newlines are excluded from count, (5) Test with empty script (0 seconds), (6) Verify integer conversion (no decimals)"
+          },
+          {
+            "id": 3,
+            "title": "Implement quality_score calculation and create comprehensive unit tests",
+            "description": "Add quality_score calculation logic (Phase 1 simplified version) and create unit tests verifying all formatter functionality including section ordering, duration accuracy, and edge cases",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Complete formatter implementation: (1) Retrieve quality_passed from state (default True), (2) Set quality_score = 1.0 if quality_passed else 0.0, (3) Return dictionary with full_script, estimated_duration_sec, and quality_score. Create tests/unit/test_formatter.py: Test all three components (merging, duration, quality_score) with comprehensive cases including missing sections, various character counts, quality_passed True/False, empty draft_script, and partial section availability.",
+            "status": "pending",
+            "testStrategy": "Unit tests: (1) quality_passed=True → quality_score=1.0, (2) quality_passed=False → quality_score=0.0, (3) quality_passed missing from state → defaults to 1.0, (4) Integration test with all features: 5 sections + duration + quality, (5) Edge case: completely empty draft_script, (6) Verify return dictionary has all 3 required keys"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Assemble LangGraph workflow (Phase 1 MVP: generator → formatter)",
+        "description": "Create graph.py with LangGraph StateGraph connecting script_generator and formatter nodes for Phase 1 MVP",
+        "details": "Implement src/graph.py Phase 1 version:\n\n```python\n# src/graph.py\nfrom langgraph.graph import StateGraph, END\nfrom src.schemas.state import ScriptState\nfrom src.nodes.script_generator import script_generator\nfrom src.nodes.formatter import formatter\n\ndef create_graph():\n    \"\"\"Create the LangGraph workflow.\"\"\"\n    \n    workflow = StateGraph(ScriptState)\n    \n    # Add nodes (Phase 1: generator + formatter only)\n    workflow.add_node(\"script_generator\", script_generator)\n    workflow.add_node(\"formatter\", formatter)\n    \n    # Define edges (Phase 1: linear flow)\n    workflow.set_entry_point(\"script_generator\")\n    workflow.add_edge(\"script_generator\", \"formatter\")\n    workflow.add_edge(\"formatter\", END)\n    \n    return workflow.compile()\n\n# Export compiled graph\ngraph = create_graph()\n```\n\nCreate main.py CLI entry point:\n\n```python\n# main.py\nimport json\nfrom src.graph import graph\nfrom src.schemas.input import ScriptInput\nfrom src.schemas.output import ScriptOutput\n\ndef main():\n    # Example input\n    input_data = ScriptInput(\n        word=\"ambiguous\",\n        korean_meaning=\"모호한, 애매한\",\n        etymology_explanation=\"라틴어 ambiguus에서 유래. ambi(양쪽) + agere(이끌다)를 의미하며, 양쪽으로 이끌리는 상태를 나타낸다.\"\n    )\n    \n    # Invoke graph\n    result = graph.invoke(input_data.model_dump())\n    \n    # Print result\n    print(\"\\n=== Generated Script ===\")\n    print(result[\"full_script\"])\n    print(f\"\\nEstimated Duration: {result['estimated_duration_sec']} seconds\")\n    print(f\"Quality Score: {result['quality_score']}\")\n\nif __name__ == \"__main__\":\n    main()\n```",
+        "testStrategy": "Integration test: (1) Run graph.invoke() with valid input, (2) Verify full_script is generated, (3) Confirm estimated_duration_sec is calculated, (4) End-to-end test with main.py CLI, (5) Measure execution time (should be <30 seconds).",
+        "priority": "high",
+        "dependencies": [
+          5,
+          6
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement create_graph() function with StateGraph initialization",
+            "description": "Create src/graph.py with create_graph() function that initializes LangGraph StateGraph with ScriptState schema and returns compiled graph instance",
+            "dependencies": [],
+            "details": "Set up graph.py module structure: (1) Import StateGraph, END from langgraph.graph, (2) Import ScriptState from schemas.state, (3) Import script_generator and formatter nodes, (4) Define create_graph() function that instantiates StateGraph(ScriptState), (5) Return workflow.compile() to create executable graph instance. This establishes the foundational structure for the LangGraph workflow.",
+            "status": "pending",
+            "testStrategy": "Unit test: (1) Verify create_graph() returns compiled graph object, (2) Check graph instance has invoke() method, (3) Validate StateGraph is initialized with correct ScriptState schema type"
+          },
+          {
+            "id": 2,
+            "title": "Add script_generator and formatter nodes with proper edges",
+            "description": "Register script_generator and formatter nodes to the StateGraph workflow and define linear edge connections for Phase 1 MVP flow",
+            "dependencies": [
+              1
+            ],
+            "details": "Inside create_graph() function: (1) Add script_generator node using workflow.add_node('script_generator', script_generator), (2) Add formatter node using workflow.add_node('formatter', formatter), (3) Set entry point with workflow.set_entry_point('script_generator'), (4) Connect script_generator → formatter with workflow.add_edge('script_generator', 'formatter'), (5) Connect formatter → END with workflow.add_edge('formatter', END). This creates the linear Phase 1 pipeline: input → script_generator → formatter → output.",
+            "status": "pending",
+            "testStrategy": "Integration test: (1) Mock both nodes to return dummy state data, (2) Invoke graph with test input, (3) Verify nodes execute in correct order (script_generator first, then formatter), (4) Confirm state flows through both nodes and reaches END"
+          },
+          {
+            "id": 3,
+            "title": "Create main.py CLI with input/output handling and error reporting",
+            "description": "Implement main.py command-line interface that accepts user input, invokes the compiled graph, and displays formatted output with error handling",
+            "dependencies": [
+              2
+            ],
+            "details": "Create main.py at project root: (1) Import graph from src.graph, (2) Import ScriptInput, ScriptOutput from schemas, (3) Define main() function with example ScriptInput instantiation (word='ambiguous', korean_meaning='모호한, 애매한', etymology from task description), (4) Invoke graph with input_data.model_dump(), (5) Print formatted output: full_script, estimated_duration_sec, quality_score, (6) Add try/except blocks to catch ValidationError and graph execution errors with clear error messages, (7) Add if __name__ == '__main__' guard.",
+            "status": "pending",
+            "testStrategy": "Manual CLI test: (1) Run python main.py and verify output displays all expected fields, (2) Test with invalid input (missing fields) to verify error messages are clear, (3) Measure execution completes within 30 seconds, (4) Verify full_script contains expected sections from formatter node"
+          },
+          {
+            "id": 4,
+            "title": "Write integration tests invoking full graph and measuring execution time",
+            "description": "Develop comprehensive integration test suite that validates end-to-end graph execution, output quality, and performance benchmarks",
+            "dependencies": [
+              3
+            ],
+            "details": "Create tests/integration/test_graph.py: (1) Test fixture with valid ScriptInput data, (2) test_graph_invoke_success() that runs graph.invoke() and validates all output fields exist (full_script, estimated_duration_sec, quality_score), (3) test_graph_execution_time() that measures time.time() before/after invoke and asserts duration < 30 seconds, (4) test_graph_state_flow() that verifies intermediate state transitions between nodes, (5) test_graph_output_format() that validates output matches ScriptOutput schema, (6) Add pytest markers for integration tests. Use real API with settings.ANTHROPIC_API_KEY if available, otherwise mock Claude client.",
+            "status": "pending",
+            "testStrategy": "Run pytest tests/integration/test_graph.py: (1) All 4-5 integration tests pass, (2) Execution time test confirms <30 sec constraint, (3) Output validation confirms all required fields present, (4) State flow test verifies script_generator → formatter transition, (5) Consider optional smoke test with real API key if configured"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Implement input_validator node with Pydantic validation",
+        "description": "Create input_validator node that validates required fields, minimum lengths, and initializes ScriptState (Phase 2)",
+        "details": "Implement nodes/input_validator.py for Phase 2:\n\n```python\n# src/nodes/input_validator.py\nfrom typing import Dict\nfrom pydantic import ValidationError\nfrom src.schemas.input import ScriptInput\nfrom src.schemas.state import ScriptState\nfrom src.config.settings import settings\n\ndef input_validator(state: Dict) -> Dict:\n    \"\"\"Validate input and initialize ScriptState.\"\"\"\n    \n    try:\n        # Validate with Pydantic\n        validated_input = ScriptInput(**state)\n        \n        # Additional validation rules\n        if len(validated_input.etymology_explanation) < settings.MIN_ETYMOLOGY_LENGTH:\n            raise ValueError(\n                f\"etymology_explanation must be at least {settings.MIN_ETYMOLOGY_LENGTH} characters. \"\n                f\"Got {len(validated_input.etymology_explanation)} characters.\"\n            )\n        \n        # Initialize ScriptState with validated input\n        return {\n            \"word\": validated_input.word,\n            \"korean_meaning\": validated_input.korean_meaning,\n            \"etymology_explanation\": validated_input.etymology_explanation,\n            \"retry_count\": 0,\n            \"quality_passed\": False,\n            \"review_feedback\": \"\",\n            \"draft_script\": {},\n            \"full_script\": \"\",\n            \"estimated_duration_sec\": 0,\n            \"quality_score\": 0.0\n        }\n    \n    except ValidationError as e:\n        # Return error state\n        error_messages = []\n        for error in e.errors():\n            field = \".\".join(str(loc) for loc in error[\"loc\"])\n            error_messages.append(f\"{field}: {error['msg']}\")\n        \n        raise ValueError(\n            f\"Input validation failed:\\n\" + \"\\n\".join(error_messages)\n        )\n```\n\nAdd graceful error handling for invalid inputs.",
+        "testStrategy": "Unit tests: (1) Valid input passes and initializes state, (2) Missing field raises ValidationError, (3) etymology_explanation <30 chars raises error, (4) Error messages are clear and actionable, (5) Verify all ScriptState fields are initialized.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement input_validator() with Pydantic model validation",
+            "description": "Create the core input_validator function that uses ScriptInput Pydantic model to validate incoming state dictionary and handle ValidationError exceptions",
+            "dependencies": [],
+            "details": "Implement the input_validator(state: Dict) -> Dict function in src/nodes/input_validator.py. Import ScriptInput from src.schemas.input and use ScriptInput(**state) to validate. Catch ValidationError and format error messages by iterating through e.errors() to extract field names and messages. Raise a clear ValueError with formatted validation errors that show which field failed and why.",
+            "status": "pending",
+            "testStrategy": "Unit test with valid input (all required fields present), test with missing 'word' field expecting ValidationError, test with invalid field type expecting ValidationError, verify error messages contain field names and are actionable"
+          },
+          {
+            "id": 2,
+            "title": "Add custom validation rules (etymology_explanation min length)",
+            "description": "Implement additional business logic validation beyond Pydantic schema, specifically checking etymology_explanation meets minimum character length from settings",
+            "dependencies": [
+              1
+            ],
+            "details": "After successful Pydantic validation in input_validator(), add custom validation check: if len(validated_input.etymology_explanation) < settings.MIN_ETYMOLOGY_LENGTH, raise ValueError with descriptive message showing required vs actual length. Import settings from src.config.settings. Ensure error message format matches: 'etymology_explanation must be at least {MIN_LENGTH} characters. Got {actual_length} characters.'",
+            "status": "pending",
+            "testStrategy": "Unit test with etymology_explanation of 29 characters (below 30 min) expecting ValueError, test with exactly 30 characters expecting pass, test with 50 characters expecting pass, verify error message shows both required and actual lengths"
+          },
+          {
+            "id": 3,
+            "title": "Create ScriptState initialization with all default fields",
+            "description": "Initialize and return complete ScriptState dictionary with all required fields populated from validated input and sensible defaults for workflow fields",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "After all validation passes, return a dictionary with ScriptState fields: word, korean_meaning, etymology_explanation (from validated_input), plus defaults: retry_count=0, quality_passed=False, review_feedback='', draft_script={}, full_script='', estimated_duration_sec=0, quality_score=0.0. Ensure field names exactly match ScriptState schema definition. This dictionary becomes the initialized state for the LangGraph workflow.",
+            "status": "pending",
+            "testStrategy": "Unit test with valid input verifying all 10 ScriptState fields are present in returned dictionary, verify input fields (word, korean_meaning, etymology_explanation) match input values, verify default fields have correct initial values (retry_count=0, quality_passed=False, etc.)"
+          },
+          {
+            "id": 4,
+            "title": "Write unit tests for valid/invalid inputs and error clarity",
+            "description": "Create comprehensive test suite covering all validation scenarios including valid inputs, missing fields, length violations, and error message quality",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Create tests/unit/test_input_validator.py with test cases: (1) test_valid_input_passes - valid data returns initialized ScriptState, (2) test_missing_required_field - missing 'word' raises ValidationError with clear message, (3) test_etymology_too_short - <30 chars raises ValueError with length info, (4) test_error_message_format - verify error messages show field names and are actionable, (5) test_all_state_fields_initialized - verify all ScriptState fields present with correct defaults. Use pytest fixtures for test data.",
+            "status": "pending",
+            "testStrategy": "Run pytest tests/unit/test_input_validator.py with coverage flag, verify >95% code coverage for input_validator.py, ensure all edge cases (empty strings, None values, boundary lengths) are tested, validate error messages are human-readable"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Implement quality_reviewer node with checklist validation",
+        "description": "Create quality_reviewer node that checks section completeness, character count, keyword presence, and manages retry logic (Phase 2)",
+        "details": "Implement nodes/quality_reviewer.py for Phase 2:\n\n```python\n# src/nodes/quality_reviewer.py\nimport re\nfrom typing import Dict, List, Tuple\nfrom src.config.settings import settings\nfrom src.schemas.state import ScriptState\n\ndef quality_reviewer(state: ScriptState) -> Dict:\n    \"\"\"Review script quality and decide on pass/retry.\"\"\"\n    \n    draft_script = state.get(\"draft_script\", {})\n    retry_count = state.get(\"retry_count\", 0)\n    \n    # Run quality checks\n    checks_passed, feedback_items = run_quality_checks(draft_script)\n    \n    # Determine pass/retry\n    if checks_passed:\n        return {\n            \"quality_passed\": True,\n            \"review_feedback\": \"\",\n            \"quality_score\": 1.0\n        }\n    \n    # Failed checks\n    if retry_count < settings.MAX_RETRY_COUNT:\n        # Retry with feedback\n        feedback_message = \"다음 항목을 개선하세요:\\n\" + \"\\n\".join(feedback_items)\n        return {\n            \"quality_passed\": False,\n            \"review_feedback\": feedback_message,\n            \"retry_count\": retry_count + 1\n        }\n    else:\n        # Max retries exceeded - force pass with low score\n        return {\n            \"quality_passed\": False,  # Flag for manual review\n            \"review_feedback\": \"최대 재시도 횟수 초과 - 수동 검토 필요\",\n            \"quality_score\": 0.5\n        }\n\ndef run_quality_checks(draft_script: Dict[str, str]) -> Tuple[bool, List[str]]:\n    \"\"\"Run quality checklist and return (passed, feedback_items).\"\"\"\n    \n    feedback = []\n    \n    # Check 1: All 5 sections present\n    for section in settings.SECTION_NAMES:\n        if section not in draft_script or not draft_script[section].strip():\n            feedback.append(f\"섹션 '{section}'이(가) 누락되었습니다.\")\n    \n    # Check 2: Total character count (200-260)\n    total_chars = sum(len(text.replace(\" \", \"\").replace(\"\\n\", \"\")) \n                      for text in draft_script.values())\n    if total_chars < settings.MIN_CHAR_COUNT:\n        feedback.append(f\"전체 글자 수가 {total_chars}자로 너무 짧습니다. 최소 {settings.MIN_CHAR_COUNT}자 필요.\")\n    elif total_chars > settings.MAX_CHAR_COUNT:\n        feedback.append(f\"전체 글자 수가 {total_chars}자로 너무 깁니다. 최대 {settings.MAX_CHAR_COUNT}자 제한.\")\n    \n    # Check 3: Etymology section contains etymology keywords\n    etymology_text = draft_script.get(\"etymology\", \"\")\n    etymology_keywords = [\"어근\", \"라틴어\", \"그리스어\", \"유래\", \"에서 왔\", \"어원\"]\n    if not any(keyword in etymology_text for keyword in etymology_keywords):\n        feedback.append(\"'etymology' 섹션에 어원 관련 키워드가 포함되어야 합니다.\")\n    \n    # Check 4: Memory anchor has concrete imagery\n    memory_anchor = draft_script.get(\"memory_anchor\", \"\")\n    if len(memory_anchor) < 15:  # Too short to be concrete\n        feedback.append(\"'memory_anchor' 섹션이 구체적인 이미지를 포함해야 합니다.\")\n    \n    return (len(feedback) == 0, feedback)\n```\n\nEnsure retry logic prevents infinite loops.",
+        "testStrategy": "Unit tests: (1) All checks pass → quality_passed=True, (2) Missing section triggers retry, (3) Character count out of range triggers retry, (4) Retry count increments correctly, (5) Max retries (2) forces pass with quality_passed=False, (6) Feedback messages are actionable.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement run_quality_checks() with section completeness verification",
+            "description": "Create the run_quality_checks() function that verifies all 5 required sections are present and non-empty in the draft_script",
+            "dependencies": [],
+            "details": "Implement the first quality check in run_quality_checks() that iterates through settings.SECTION_NAMES and verifies each section exists in draft_script and contains non-whitespace content. Add appropriate Korean feedback messages for missing sections (e.g., '섹션 [name]이(가) 누락되었습니다.'). Return tuple (bool, List[str]) format.",
+            "status": "pending",
+            "testStrategy": "Unit tests: (1) All sections present returns (True, []), (2) Missing single section returns (False, [feedback]), (3) Empty section treated as missing, (4) Multiple missing sections accumulate feedback"
+          },
+          {
+            "id": 2,
+            "title": "Add character count range validation (200-260)",
+            "description": "Implement character count validation that checks total script length falls within MIN_CHAR_COUNT (200) and MAX_CHAR_COUNT (260) range",
+            "dependencies": [
+              1
+            ],
+            "details": "Add character counting logic that sums all section text lengths after stripping spaces and newlines (Korean character-aware). Compare against settings.MIN_CHAR_COUNT and settings.MAX_CHAR_COUNT. Generate Korean feedback for out-of-range counts ('전체 글자 수가 X자로 너무 짧습니다/깁니다'). Append feedback to the list returned by run_quality_checks().",
+            "status": "pending",
+            "testStrategy": "Unit tests: (1) Count within 200-260 passes, (2) Count < 200 adds 'too short' feedback, (3) Count > 260 adds 'too long' feedback, (4) Verify spaces/newlines excluded from count, (5) Test with Korean characters"
+          },
+          {
+            "id": 3,
+            "title": "Implement etymology keyword detection logic",
+            "description": "Create etymology section validation that checks for presence of Korean etymology-related keywords in the etymology section",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement check that searches etymology section text for any of the keywords: ['어근', '라틴어', '그리스어', '유래', '에서 왔', '어원']. Use string containment check (keyword in text). Add feedback message if no keywords found: 'etymology 섹션에 어원 관련 키워드가 포함되어야 합니다.' Handle missing etymology section gracefully.",
+            "status": "pending",
+            "testStrategy": "Unit tests: (1) Text with '어근' passes, (2) Text with any keyword passes, (3) Text without keywords fails with feedback, (4) Empty etymology section fails, (5) Verify all 6 keywords work"
+          },
+          {
+            "id": 4,
+            "title": "Add memory_anchor concreteness check",
+            "description": "Implement memory_anchor validation that ensures the section contains concrete imagery with minimum length requirement",
+            "dependencies": [
+              1
+            ],
+            "details": "Add check for memory_anchor section that validates minimum length of 15 characters (configurable threshold). Generate feedback if too short: 'memory_anchor 섹션이 구체적인 이미지를 포함해야 합니다.' This simple length heuristic serves as proxy for concreteness. Append to feedback list in run_quality_checks().",
+            "status": "pending",
+            "testStrategy": "Unit tests: (1) memory_anchor ≥ 15 chars passes, (2) memory_anchor < 15 chars fails with feedback, (3) Empty memory_anchor fails, (4) Test with Korean characters (multi-byte encoding)"
+          },
+          {
+            "id": 5,
+            "title": "Create retry logic with max retry enforcement in quality_reviewer()",
+            "description": "Implement the main quality_reviewer() function with retry logic that respects MAX_RETRY_COUNT and returns appropriate state updates",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Create quality_reviewer(state: ScriptState) that: (1) Extracts draft_script and retry_count from state, (2) Calls run_quality_checks(), (3) If passed: returns quality_passed=True with quality_score=1.0, (4) If failed and retry_count < MAX_RETRY_COUNT: returns quality_passed=False with feedback and incremented retry_count, (5) If max retries exceeded: returns quality_passed=False with quality_score=0.5 and manual review message ('최대 재시도 횟수 초과 - 수동 검토 필요'). Format feedback as Korean bullet list.",
+            "status": "pending",
+            "testStrategy": "Unit tests: (1) All checks pass → quality_passed=True, quality_score=1.0, (2) Failed check with retry_count=0 → quality_passed=False, retry_count=1, (3) Failed check at MAX_RETRY_COUNT → quality_passed=False, quality_score=0.5, (4) Verify feedback formatting"
+          },
+          {
+            "id": 6,
+            "title": "Write comprehensive unit tests for all check scenarios and retry behavior",
+            "description": "Create complete test suite covering all quality checks, edge cases, retry logic, and integration scenarios",
+            "dependencies": [
+              5
+            ],
+            "details": "Implement tests/unit/test_quality_reviewer.py with pytest fixtures and test cases: (1) Test each individual quality check (sections, char count, etymology, memory_anchor), (2) Test combined check scenarios, (3) Test retry increment logic, (4) Test max retry enforcement (prevent infinite loops), (5) Test feedback message generation in Korean, (6) Test edge cases (empty draft, missing sections, boundary character counts), (7) Mock ScriptState and settings for isolated testing. Aim for >90% code coverage.",
+            "status": "pending",
+            "testStrategy": "Test the tests: (1) Run pytest with coverage reporting, (2) Verify all code paths exercised, (3) Test fails when quality_reviewer logic breaks, (4) Manual review of test readability and maintainability"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Integrate all nodes with conditional edges (Phase 2 complete workflow)",
+        "description": "Update graph.py to include input_validator and quality_reviewer with conditional retry loop logic",
+        "details": "Update src/graph.py to Phase 2 complete version:\n\n```python\n# src/graph.py (Phase 2)\nfrom langgraph.graph import StateGraph, END\nfrom src.schemas.state import ScriptState\nfrom src.nodes.input_validator import input_validator\nfrom src.nodes.script_generator import script_generator\nfrom src.nodes.quality_reviewer import quality_reviewer\nfrom src.nodes.formatter import formatter\nfrom src.config.settings import settings\n\ndef should_retry(state: ScriptState) -> str:\n    \"\"\"Conditional edge: decide retry or proceed.\"\"\"\n    if state[\"quality_passed\"]:\n        return \"formatter\"\n    elif state[\"retry_count\"] < settings.MAX_RETRY_COUNT:\n        return \"script_generator\"  # Retry\n    else:\n        return \"formatter\"  # Force proceed after max retries\n\ndef create_graph():\n    \"\"\"Create the complete LangGraph workflow.\"\"\"\n    \n    workflow = StateGraph(ScriptState)\n    \n    # Add all nodes\n    workflow.add_node(\"input_validator\", input_validator)\n    workflow.add_node(\"script_generator\", script_generator)\n    workflow.add_node(\"quality_reviewer\", quality_reviewer)\n    workflow.add_node(\"formatter\", formatter)\n    \n    # Define edges\n    workflow.set_entry_point(\"input_validator\")\n    workflow.add_edge(\"input_validator\", \"script_generator\")\n    workflow.add_edge(\"script_generator\", \"quality_reviewer\")\n    \n    # Conditional edge: retry loop or proceed\n    workflow.add_conditional_edges(\n        \"quality_reviewer\",\n        should_retry,\n        {\n            \"script_generator\": \"script_generator\",\n            \"formatter\": \"formatter\"\n        }\n    )\n    \n    workflow.add_edge(\"formatter\", END)\n    \n    return workflow.compile()\n\ngraph = create_graph()\n```\n\nUpdate main.py to handle validation errors gracefully:\n\n```python\n# main.py (updated)\ntry:\n    result = graph.invoke(input_data.model_dump())\n    output = ScriptOutput(\n        word=result[\"word\"],\n        script=result[\"draft_script\"],\n        full_script=result[\"full_script\"],\n        estimated_duration_sec=result[\"estimated_duration_sec\"],\n        quality_score=result[\"quality_score\"],\n        quality_passed=result[\"quality_passed\"]\n    )\n    print(json.dumps(output.model_dump(), indent=2, ensure_ascii=False))\nexcept Exception as e:\n    print(f\"Error: {str(e)}\")\n```",
+        "testStrategy": "Integration tests: (1) Valid input flows through all 4 nodes, (2) Invalid input stops at input_validator, (3) Poor quality script triggers retry (verify retry_count increments), (4) After 2 retries, quality_reviewer forces pass, (5) End-to-end test with intentionally poor input to trigger retry loop, (6) Verify no infinite loops occur.",
+        "priority": "medium",
+        "dependencies": [
+          7,
+          8,
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement should_retry() conditional edge function with retry logic",
+            "description": "Create the should_retry() function that evaluates ScriptState to determine if the workflow should retry script generation, proceed to formatter, or force proceed after max retries",
+            "dependencies": [],
+            "details": "Implement the should_retry(state: ScriptState) -> str function in src/graph.py. The function must check state['quality_passed'] and state['retry_count'] against settings.MAX_RETRY_COUNT. Return 'formatter' if quality_passed is True, return 'script_generator' if retry_count < MAX_RETRY_COUNT (retry path), otherwise return 'formatter' (force proceed after max retries). Ensure proper error handling for missing state keys.",
+            "status": "pending",
+            "testStrategy": "Unit test with mock states: (1) quality_passed=True returns 'formatter', (2) quality_passed=False and retry_count=0 returns 'script_generator', (3) quality_passed=False and retry_count=2 (at max) returns 'formatter', (4) Verify correct conditional logic with edge cases"
+          },
+          {
+            "id": 2,
+            "title": "Update create_graph() to add all 4 nodes and basic edges",
+            "description": "Modify create_graph() function to instantiate StateGraph with all four nodes (input_validator, script_generator, quality_reviewer, formatter) and add sequential edges between them",
+            "dependencies": [
+              1
+            ],
+            "details": "In src/graph.py, update the create_graph() function to: (1) Initialize workflow = StateGraph(ScriptState), (2) Add all 4 nodes using workflow.add_node() for input_validator, script_generator, quality_reviewer, and formatter, (3) Set entry point to 'input_validator', (4) Add sequential edges: input_validator -> script_generator, script_generator -> quality_reviewer, (5) Add edge from formatter to END. Import all node functions from their respective modules.",
+            "status": "pending",
+            "testStrategy": "Integration test: (1) Verify graph compiles without errors, (2) Check that all 4 nodes are registered in the workflow, (3) Confirm entry point is set correctly, (4) Validate edge connections using graph inspection methods"
+          },
+          {
+            "id": 3,
+            "title": "Add conditional_edges from quality_reviewer with retry loop",
+            "description": "Implement the conditional edge logic from quality_reviewer node using add_conditional_edges() to create the retry loop mechanism based on should_retry() function",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "In src/graph.py create_graph(), add workflow.add_conditional_edges() after the quality_reviewer node. Configure it to call should_retry function with edge mapping: {'script_generator': 'script_generator', 'formatter': 'formatter'}. This creates the retry loop where quality_reviewer can route back to script_generator or forward to formatter. Ensure the conditional edge is added before the formatter->END edge. Verify the graph compiles correctly with the cycle.",
+            "status": "pending",
+            "testStrategy": "Integration tests: (1) Simulate poor quality (quality_passed=False, retry_count=0) and verify routing to script_generator, (2) Simulate quality pass and verify routing to formatter, (3) Simulate max retries reached and verify force routing to formatter, (4) Confirm no infinite loop occurs"
+          },
+          {
+            "id": 4,
+            "title": "Update main.py with error handling and ScriptOutput formatting",
+            "description": "Modify main.py to wrap graph.invoke() in try-catch block, handle validation errors gracefully, and format output using ScriptOutput model",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Update main.py to: (1) Import ScriptOutput from src.schemas.output, (2) Wrap graph.invoke(input_data.model_dump()) in try-except block, (3) On success, create ScriptOutput instance with fields: word, script (from draft_script), full_script, estimated_duration_sec, quality_score, quality_passed from result dictionary, (4) Print output as JSON with json.dumps(output.model_dump(), indent=2, ensure_ascii=False), (5) On exception, print formatted error message with str(e). Ensure all required imports are present.",
+            "status": "pending",
+            "testStrategy": "Manual testing: (1) Test with valid input and verify JSON output format, (2) Test with invalid input (missing required fields) and verify graceful error message, (3) Verify Korean characters display correctly with ensure_ascii=False, (4) Check that all ScriptOutput fields are populated correctly"
+          },
+          {
+            "id": 5,
+            "title": "Write integration tests for retry loop behavior and max retry enforcement",
+            "description": "Create comprehensive integration tests that verify the conditional retry loop works correctly, retry_count increments properly, and max retry limit is enforced",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Create tests/integration/test_retry_workflow.py with test cases: (1) test_quality_pass_first_attempt: Mock quality_reviewer to pass immediately, verify no retry occurs, (2) test_retry_once_then_pass: Mock to fail once then pass, verify retry_count=1 and routing to script_generator then formatter, (3) test_max_retry_enforcement: Mock to always fail, verify exactly MAX_RETRY_COUNT retries occur then force proceed to formatter, (4) test_retry_count_increments: Verify retry_count increments correctly in state across iterations, (5) test_state_propagation: Ensure state data persists correctly through retry cycles. Use pytest fixtures and mocking for quality_reviewer responses.",
+            "status": "pending",
+            "testStrategy": "Run pytest tests/integration/test_retry_workflow.py with coverage: (1) All 5 test cases pass, (2) Verify retry loop terminates correctly, (3) Check no infinite loops, (4) Validate state consistency across retries, (5) Achieve ≥90% coverage of graph.py conditional logic"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Create test fixtures and comprehensive test suite (Phase 3)",
+        "description": "Develop test fixtures with 10+ word samples and implement unit + integration tests for all nodes and E2E workflow",
+        "details": "Create test infrastructure for Phase 3:\n\n```json\n// tests/fixtures/sample_words.json\n[\n  {\n    \"word\": \"ambiguous\",\n    \"korean_meaning\": \"모호한, 애매한\",\n    \"etymology_explanation\": \"라틴어 ambiguus에서 유래. ambi(양쪽) + agere(이끌다)를 의미하며, 양쪽으로 이끌리는 상태를 나타낸다.\"\n  },\n  {\n    \"word\": \"etymology\",\n    \"korean_meaning\": \"어원\",\n    \"etymology_explanation\": \"그리스어 etymologia에서 유래. etymon(진실, 원래 의미) + logia(학문)의 합성어로, 단어의 기원과 역사를 연구하는 학문을 의미한다.\"\n  },\n  // ... 8 more samples\n]\n```\n\nImplement comprehensive test suite:\n\n```python\n# tests/unit/test_input_validator.py\nimport pytest\nfrom src.nodes.input_validator import input_validator\n\ndef test_valid_input():\n    state = {\n        \"word\": \"test\",\n        \"korean_meaning\": \"테스트\",\n        \"etymology_explanation\": \"A\" * 30\n    }\n    result = input_validator(state)\n    assert result[\"retry_count\"] == 0\n    assert \"word\" in result\n\ndef test_missing_field():\n    with pytest.raises(ValueError):\n        input_validator({\"word\": \"test\"})\n\n# tests/integration/test_graph_e2e.py\nimport json\nimport pytest\nfrom src.graph import graph\n\n@pytest.fixture\ndef sample_words():\n    with open(\"tests/fixtures/sample_words.json\") as f:\n        return json.load(f)\n\ndef test_e2e_success(sample_words):\n    for word_data in sample_words:\n        result = graph.invoke(word_data)\n        assert \"full_script\" in result\n        assert result[\"estimated_duration_sec\"] >= 45\n        assert result[\"estimated_duration_sec\"] <= 70  # Allow slight variance\n\ndef test_e2e_quality_metrics(sample_words):\n    results = [graph.invoke(word) for word in sample_words]\n    passed_count = sum(1 for r in results if r[\"quality_passed\"])\n    \n    # PRD requirement: ≥90% quality pass rate\n    pass_rate = passed_count / len(results)\n    assert pass_rate >= 0.9, f\"Quality pass rate {pass_rate:.1%} below 90% threshold\"\n```\n\nCreate pytest.ini configuration.",
+        "testStrategy": "Execute test suite: (1) All unit tests pass, (2) E2E test with 10 words completes, (3) Quality pass rate ≥90%, (4) Average generation time ≤30 seconds, (5) No test should exceed 60 seconds timeout, (6) Code coverage ≥80% for nodes.",
+        "priority": "medium",
+        "dependencies": [
+          10
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create test fixtures with 10+ diverse word samples",
+            "description": "Design and implement tests/fixtures/sample_words.json with at least 10 word samples covering diverse etymology types (Latin, Greek, Germanic, French, etc.) with proper Korean meanings and etymology explanations",
+            "dependencies": [],
+            "details": "Create sample_words.json with varied word samples: (1) Include words from different language origins (Latin: 'ambiguous', Greek: 'etymology', Germanic, French, etc.), (2) Ensure each word has accurate korean_meaning field, (3) Write etymology_explanation with minimum 30 characters meeting PRD requirements, (4) Cover edge cases like compound words, borrowed words, and technical terms, (5) Include at least one word that might challenge quality thresholds to test retry logic",
+            "status": "pending",
+            "testStrategy": "Manual validation: (1) JSON is valid and parseable, (2) All 10+ words have required fields (word, korean_meaning, etymology_explanation), (3) etymology_explanation ≥30 characters for each entry, (4) Diverse etymology origins represented"
+          },
+          {
+            "id": 2,
+            "title": "Implement unit tests for input_validator node",
+            "description": "Create tests/unit/test_input_validator.py with comprehensive test coverage for input validation logic including valid inputs, missing fields, and constraint violations",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement input_validator unit tests: (1) test_valid_input() verifies proper state initialization with retry_count=0, (2) test_missing_field() checks ValueError raised for incomplete data, (3) test_etymology_too_short() validates minimum 30-character requirement, (4) test_empty_word() ensures non-empty word field, (5) test_empty_korean_meaning() validates Korean meaning presence, (6) Use pytest.raises for exception tests, (7) Assert all state fields are properly set after validation",
+            "status": "pending",
+            "testStrategy": "Run pytest tests/unit/test_input_validator.py -v: (1) All test cases pass, (2) Coverage for valid/invalid scenarios ≥90%, (3) Edge cases handled properly"
+          },
+          {
+            "id": 3,
+            "title": "Create unit tests for script_generator with mocked API",
+            "description": "Implement tests/unit/test_script_generator.py with mocked Anthropic API responses to test script generation logic without actual API calls",
+            "dependencies": [
+              1
+            ],
+            "details": "Build script_generator unit tests with mocks: (1) Use pytest-mock or unittest.mock to mock Anthropic API calls, (2) test_successful_generation() validates proper full_script extraction from mocked response, (3) test_api_error_handling() checks error propagation, (4) test_prompt_construction() verifies system prompt includes word/etymology data, (5) test_retry_feedback_integration() ensures retry_feedback is incorporated when retry_count > 0, (6) Mock responses should include realistic JSON structure matching expected output format",
+            "status": "pending",
+            "testStrategy": "Execute pytest tests/unit/test_script_generator.py -v: (1) All mocked scenarios pass, (2) No actual API calls made during tests, (3) Prompt construction verified with assertions"
+          },
+          {
+            "id": 4,
+            "title": "Implement unit tests for quality_reviewer and formatter nodes",
+            "description": "Create tests/unit/test_quality_reviewer.py and tests/unit/test_formatter.py to validate quality checking logic and output formatting",
+            "dependencies": [
+              1
+            ],
+            "details": "Develop quality_reviewer and formatter unit tests: (1) test_quality_pass() with script meeting 200-260 char range and 5-section structure, (2) test_quality_fail_char_count() for scripts outside range, (3) test_quality_fail_missing_section() for incomplete structure, (4) test_formatter_output() validates ScriptOutput model fields (full_script, estimated_duration_sec, quality_passed, retry_count), (5) test_duration_calculation() ensures reading_speed calculation is correct (script_length / 270 * 60), (6) Use sample scripts from fixtures for realistic testing",
+            "status": "pending",
+            "testStrategy": "Run pytest tests/unit/test_quality_reviewer.py tests/unit/test_formatter.py -v: (1) Quality validation logic correct for pass/fail cases, (2) Duration calculation accurate, (3) All edge cases covered"
+          },
+          {
+            "id": 5,
+            "title": "Implement E2E integration test with full workflow",
+            "description": "Create tests/integration/test_graph_e2e.py to run all 10+ word samples through the complete graph workflow from input to final output",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Build comprehensive E2E integration test: (1) Create pytest fixture loading sample_words.json, (2) test_e2e_success() invokes graph.invoke() for each word and validates output structure, (3) Assert full_script field exists in results, (4) Validate estimated_duration_sec is within 45-70 second range (allowing variance), (5) Check all outputs have quality_passed field, (6) Ensure no exceptions during full workflow execution, (7) Add test timeout decorator (@pytest.mark.timeout(60)) per test requirement",
+            "status": "pending",
+            "testStrategy": "Execute pytest tests/integration/test_graph_e2e.py -v: (1) All 10+ words complete successfully, (2) Output format matches ScriptOutput schema, (3) No test exceeds 60-second timeout"
+          },
+          {
+            "id": 6,
+            "title": "Add quality metrics validation for PRD requirements",
+            "description": "Extend E2E tests with test_e2e_quality_metrics() to validate ≥90% quality pass rate and ≤30s average generation time as specified in PRD success criteria",
+            "dependencies": [
+              5
+            ],
+            "details": "Implement quality metrics validation: (1) In test_e2e_quality_metrics(), collect all graph.invoke() results for sample words, (2) Calculate pass_rate = passed_count / total_count where passed = quality_passed is True, (3) Assert pass_rate >= 0.9 with descriptive error message showing actual percentage, (4) Calculate avg_generation_time by timing each invoke call, (5) Assert average time ≤30 seconds, (6) Log detailed metrics for debugging (individual times, pass/fail breakdown), (7) Handle retry scenarios in timing calculations",
+            "status": "pending",
+            "testStrategy": "Run integration test with metrics: (1) Quality pass rate ≥90% threshold met, (2) Average generation time ≤30 seconds, (3) Test fails with clear message if thresholds not met"
+          },
+          {
+            "id": 7,
+            "title": "Configure pytest.ini and measure code coverage",
+            "description": "Create pytest.ini configuration file with test discovery, timeout, and coverage settings to achieve ≥80% code coverage for nodes module",
+            "dependencies": [
+              2,
+              3,
+              4,
+              6
+            ],
+            "details": "Setup pytest infrastructure: (1) Create pytest.ini with testpaths=['tests'], python_files='test_*.py', timeout=60 for all tests, (2) Configure pytest-cov plugin with --cov=src/nodes --cov-report=html --cov-report=term, (3) Set coverage threshold to 80% minimum for nodes module, (4) Add markers for unit vs integration tests, (5) Configure verbose output and color, (6) Run full test suite with coverage: pytest --cov=src/nodes --cov-report=term-missing, (7) Generate HTML coverage report for review",
+            "status": "pending",
+            "testStrategy": "Validate configuration: (1) pytest runs all tests successfully, (2) Coverage report shows ≥80% for src/nodes, (3) pytest.ini settings work correctly (timeouts, discovery), (4) HTML coverage report generated in htmlcov/"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Prompt tuning and quality calibration based on test results (Phase 3)",
+        "description": "Analyze test failure patterns, optimize system prompt, calibrate quality thresholds, and refine character count ranges",
+        "details": "Iterative improvement process for Phase 3:\n\n1. **Analyze Test Failures**:\n   - Collect failed script samples from test run\n   - Categorize failure modes (section missing, character count off, weak memory anchor, etc.)\n   - Calculate failure distribution\n\n2. **Prompt Optimization**:\n```python\n# Update src/prompts/script_prompt.py based on failures\n\n# If sections often missing → Add explicit section checklist\n# If character count too long → Emphasize brevity examples\n# If memory anchor too abstract → Add concrete imagery examples\n# If tone too formal → Add more colloquial few-shot examples\n\nSYSTEM_PROMPT_TEMPLATE = \"\"\"\n[Enhanced based on failure analysis]\n\n**중요**: 각 섹션을 반드시 포함하세요:\n✓ hook (필수)\n✓ etymology (필수)\n✓ context (필수) \n✓ memory_anchor (필수 - 구체적 상황 묘사)\n✓ closing (필수)\n\n**글자 수 엄수**: 전체 200-260자 (공백 제외)\n- hook: ~30자\n- etymology: ~80자\n- context: ~50자\n- memory_anchor: ~50자\n- closing: ~20자\n...\n\"\"\"\n```\n\n3. **Quality Threshold Calibration**:\n   - Adjust MIN_CHAR_COUNT/MAX_CHAR_COUNT if duration mismatches observed\n   - Refine memory_anchor minimum length based on quality correlation\n   - Update keyword lists for etymology section\n\n4. **Documentation**:\n```markdown\n# docs/usage.md\n\n## Quick Start\n\n### Installation\n\\`\\`\\`bash\npip install -e .\ncp .env.example .env\n# Add your ANTHROPIC_API_KEY to .env\n\\`\\`\\`\n\n### Basic Usage\n\\`\\`\\`python\nfrom src.graph import graph\n\nresult = graph.invoke({\n    \"word\": \"etymology\",\n    \"korean_meaning\": \"어원\",\n    \"etymology_explanation\": \"...\"\n})\n\nprint(result[\"full_script\"])\n\\`\\`\\`\n\n### Input Guidelines\n- etymology_explanation: 최소 30자, 구체적인 어근 설명 포함 권장\n- 어원 배경이 풍부할수록 품질 향상\n\n### Output Interpretation\n- quality_passed=True: 바로 사용 가능\n- quality_passed=False: 수동 검토 권장\n- quality_score: 0.0-1.0 (0.9 이상 권장)\n```",
+        "testStrategy": "Validation: (1) Re-run full test suite after prompt updates, (2) Quality pass rate improves to ≥90%, (3) Average retry count ≤1.0, (4) Character count variance reduced, (5) Manual review of 5 generated scripts for naturalness and accuracy, (6) Documentation completeness check.",
+        "priority": "low",
+        "dependencies": [
+          11
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Run full test suite and collect failure samples",
+            "description": "Execute the complete test suite to gather all test results, identifying failed cases and collecting their output samples for analysis.",
+            "dependencies": [],
+            "details": "Run pytest on tests/integration/ to execute all script generation tests. Capture outputs including: failed test names, generated scripts (draft_script), quality_passed flags, retry_count values, and any error messages. Save failed samples to a structured format (JSON or CSV) for subsequent analysis. Ensure at least 20-30 test cases are run to get statistically meaningful failure patterns.",
+            "status": "pending",
+            "testStrategy": "Verify test suite runs completely without errors. Confirm failure samples are saved with all required fields (word, draft_script, quality_passed, retry_count, failure_reason)."
+          },
+          {
+            "id": 2,
+            "title": "Categorize failure modes and calculate distribution",
+            "description": "Analyze collected failure samples to identify and categorize distinct failure patterns, then calculate the distribution of each failure type.",
+            "dependencies": [
+              1
+            ],
+            "details": "Review failed samples and categorize into failure modes: (1) Missing sections (hook, etymology, context, memory_anchor, closing), (2) Character count violations (too short <200 or too long >260), (3) Weak memory anchors (too abstract, lacks concrete imagery), (4) Tone issues (too formal, not conversational), (5) Etymology keyword absence, (6) JSON parsing failures. Count occurrences of each category and calculate percentages. Create a failure distribution report showing which issues are most prevalent.",
+            "status": "pending",
+            "testStrategy": "Validation: (1) All failure samples are categorized, (2) Distribution percentages sum to 100%, (3) Each category has clear definition and examples, (4) Report identifies top 3 failure modes by frequency."
+          },
+          {
+            "id": 3,
+            "title": "Analyze character distribution across sections from successful outputs",
+            "description": "Examine successful test outputs to understand optimal character count distribution across the 5 sections for use as guidance in prompt updates.",
+            "dependencies": [
+              1
+            ],
+            "details": "Filter test results for quality_passed=True cases. For each successful script, measure character counts (excluding spaces) for: hook, etymology, context, memory_anchor, and closing sections. Calculate statistics: mean, median, min, max, and standard deviation for each section. Identify the typical ranges that lead to successful outputs (e.g., hook: 25-35 chars, etymology: 75-90 chars). Document these ranges to inform prompt refinement with realistic targets.",
+            "status": "pending",
+            "testStrategy": "Verify: (1) At least 10 successful samples analyzed, (2) Character count statistics calculated for all 5 sections, (3) Recommended ranges are realistic and sum to 200-260 total chars, (4) Documentation includes examples of well-balanced scripts."
+          },
+          {
+            "id": 4,
+            "title": "Update SYSTEM_PROMPT_TEMPLATE with explicit section checklists and refined examples",
+            "description": "Modify src/prompts/script_prompt.py to address identified failure modes by adding explicit checklists, emphasizing problematic areas, and improving few-shot examples.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Update SYSTEM_PROMPT_TEMPLATE based on failure analysis: (1) If sections often missing → Add explicit checklist format with ✓ marks for each required section, (2) If character counts too long → Add brevity examples and emphasize character limits per section, (3) If memory_anchor too abstract → Include 2-3 concrete imagery examples with specific situations, (4) If tone too formal → Add colloquial few-shot examples using 구어체. Incorporate the character distribution ranges from analysis. Ensure prompt clearly states consequences of missing sections or limit violations.",
+            "status": "pending",
+            "testStrategy": "Code review: (1) All top 3 failure modes are addressed in updated prompt, (2) Section checklist is prominently placed, (3) Character guidance includes per-section targets from analysis, (4) At least one new few-shot example demonstrates correct format and tone."
+          },
+          {
+            "id": 5,
+            "title": "Calibrate quality thresholds (adjust MIN/MAX_CHAR_COUNT and refine keyword lists)",
+            "description": "Fine-tune quality validation parameters in config/settings.py and quality_reviewer node based on test result analysis and duration requirements.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Review settings.py and nodes/quality_reviewer.py: (1) If scripts consistently run too short/long for 45-60sec target, adjust MIN_CHAR_COUNT/MAX_CHAR_COUNT bounds (currently 200-260), (2) Analyze memory_anchor length correlation with quality scores - set minimum length threshold if needed, (3) Update ETYMOLOGY_KEYWORDS list if certain valuable terms are missing, (4) Adjust retry_count maximum if needed based on convergence patterns. Document rationale for each threshold change.",
+            "status": "pending",
+            "testStrategy": "Validation: (1) Updated thresholds are justified by test data, (2) Character count range still produces 45-60sec scripts, (3) Keyword list covers at least 90% of valid etymology explanations, (4) Changes are documented in code comments."
+          },
+          {
+            "id": 6,
+            "title": "Add per-section character guidance to prompt",
+            "description": "Enhance the system prompt with specific character targets for each of the 5 sections to help the LLM maintain proper script balance.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "In src/prompts/script_prompt.py, add a detailed character allocation guide within SYSTEM_PROMPT_TEMPLATE: 'hook: ~30자 (25-35자 권장)', 'etymology: ~80자 (75-90자 권장)', 'context: ~50자 (45-55자 권장)', 'memory_anchor: ~50자 (45-60자 권장)', 'closing: ~20자 (15-25자 권장)'. Use the ranges derived from successful outputs analysis. Format this as a clear reference table or bullet list that the LLM can easily follow during generation.",
+            "status": "pending",
+            "testStrategy": "Verify: (1) All 5 sections have explicit character targets, (2) Ranges are based on actual successful output data, (3) Total range (sum of mins to sum of maxs) encompasses 200-260 chars, (4) Guidance is visually prominent in prompt."
+          },
+          {
+            "id": 7,
+            "title": "Create docs/usage.md with input guidelines and output interpretation",
+            "description": "Write comprehensive user documentation covering installation, basic usage, input guidelines, and how to interpret quality assessment results.",
+            "dependencies": [],
+            "details": "Create docs/usage.md with sections: (1) Installation (pip install -e ., .env setup with ANTHROPIC_API_KEY), (2) Basic Usage (example code showing graph.invoke with sample inputs), (3) Input Guidelines (etymology_explanation minimum 30 chars, recommend rich etymological background, tips for better quality), (4) Output Interpretation (quality_passed meanings, quality_score ranges 0.0-1.0 with 0.9+ recommended, when manual review is needed), (5) Troubleshooting common issues. Include code examples and expected output samples.",
+            "status": "pending",
+            "testStrategy": "Documentation review: (1) All sections present and complete, (2) Code examples are runnable, (3) Input guidelines are specific and actionable, (4) Output interpretation clearly explains quality_passed and quality_score, (5) Markdown formatting is correct."
+          },
+          {
+            "id": 8,
+            "title": "Re-run test suite and validate ≥90% pass rate achieved",
+            "description": "Execute the full test suite again after all optimizations to verify that quality improvements have achieved the target 90% pass rate and other success metrics.",
+            "dependencies": [
+              4,
+              5,
+              6
+            ],
+            "details": "Run pytest on tests/integration/ with all prompt and threshold updates applied. Collect metrics: (1) Quality pass rate (target ≥90%), (2) Average retry count (target ≤1.0), (3) Character count variance across outputs (should be reduced from baseline), (4) Section completeness rate (target 100%). Manually review 5 randomly selected generated scripts for naturalness, accuracy, and adherence to tone guidelines. Document final metrics and compare against pre-optimization baseline. If pass rate <90%, identify remaining issues and iterate on prompts.",
+            "status": "pending",
+            "testStrategy": "Success criteria: (1) Pass rate ≥90% achieved, (2) Average retry count ≤1.0, (3) Character count standard deviation reduced by ≥20% from baseline, (4) Manual review confirms 4/5 scripts are natural and accurate, (5) All metrics documented in test report."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2026-03-28T13:07:23.154Z",
+      "updated": "2026-03-28T13:07:23.154Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
